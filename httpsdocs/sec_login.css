@@ -1,0 +1,35 @@
+body, html, .nav{
+    FONT-FAMILY:ARIAL;
+    FONT-SIZE:12px;
+    MARGIN:0px;
+    PADDING:0px;
+    overflow:auto;
+    width:100%;
+    height:100%;
+}
+
+body {
+    background: linear-gradient(#3A9848, #D0FA58);
+    vertical-align:middle;
+}
+
+h1 {
+    color: maroon;
+} 
+
+table {
+    margin-top:20%;
+    margin-left:auto;
+    margin-right:auto;
+}
+
+.nav{PADDING:10px;}
+
+br {
+    display: block;
+    margin:10px;
+}
+
+img{
+    VERTICAL-ALIGN:MIDDLE;
+}

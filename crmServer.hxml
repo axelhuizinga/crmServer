@@ -1,0 +1,8 @@
+-lib CommentString
+-cp C:/www/remotion4.me/httpdocs/lib
+-cp lib
+-cp src
+-php bin
+-main S
+--php-front server.php
+-dce std

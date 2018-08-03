@@ -1,0 +1,9 @@
+*{font-family:verdana,sans;color:#eee;}
+body,html{background-color:#2b1600;height:100%;overflow:hidden;margin:0;padding:0;}
+contextmenu ul{list-style:none;}
+:focus{outline:none;}
+.app{display:none;}
+.menu-right{float:right;min-width:240px;height:100%;}
+.bgBox{top:0;bottom:0;left:0;right:0;position:absolute;padding:8px;}
+#mtabs{float:left;width:70%;}
+
