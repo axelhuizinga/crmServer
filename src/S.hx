@@ -8,13 +8,14 @@ import me.cunity.php.db.MySQLi;
 import me.cunity.php.db.MySQLi_Result;
 import me.cunity.php.db.MySQLi_STMT;
 import me.cunity.php.Services_JSON;
-import model.AgcApi;
+import phprbac.Rbac;
+//import model.AgcApi;
 import model.App;
-import model.Campaigns;
-import model.Clients;
-import model.ClientHistory;
-import model.QC;
-import model.Select;
+//import model.Campaigns;
+import model.Contact;
+//import model.ClientHistory;
+//import model.QC;
+//import model.Select;
 import model.Users;
 import php.Lib;
 import me.cunity.php.Debug;
@@ -98,6 +99,10 @@ class S
 	
 	static function checkAuth():Bool
 	{
+		var rbac:Rbac = new Rbac();
+		trace(rbac);
+		var newRole:Int = rbac.roles.add('SysAdmin', 'Systemadministrator');
+		trace('added: $newRole');
 		user = Session.get('PHP_AUTH_USER');
 		trace(user);
 		if (user == null)
@@ -184,17 +189,18 @@ class S
 	}
 	
 	static function __init__() {
-		untyped __call__('require_once', '../../config/flyCRM.db.php');
-		untyped __call__('require_once', '../../crm/functions.php');
-		untyped __call__('require_once', '../../crm/loadAstguiclientConf.php');
-		untyped __call__('require_once', '../agc/functions.fix.php');
+		untyped __call__('require_once', '../.crm/db.php');
+		untyped __call__('require_once', '../.crm/functions.php');
+		untyped __call__('require_once', 'inc/PhpRbac/Rbac.php');
+		//untyped __call__('require_once', '../../crm/loadAstguiclientConf.php');
+		//untyped __call__('require_once', '../agc/functions.fix.php');
 		Debug.logFile = untyped __php__("$appLog");
 		//edump(Debug.logFile);
 		//Debug.logFile = untyped __var__("GLOBALS","appLog");
-		db = untyped __php__("$VARDB");
-		dbHost = untyped __php__("$VARDB_server");
-		dbUser = untyped __php__("$VARDB_user");
-		dbPass = untyped __php__("$VARDB_pass");		
+		db = untyped __php__("$DB");
+		dbHost = untyped __php__("$DB_server");
+		dbUser = untyped __php__("$DB_user");
+		dbPass = untyped __php__("$DB_pass");		
 		host = Web.getHostName();
 		request_scheme = untyped __php__("$_SERVER['REQUEST_SCHEME']");
 		//trace(host);

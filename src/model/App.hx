@@ -48,7 +48,7 @@ class App extends Model
 				typeMap.set(cFields[f], aFields[f].get('field_type'));
 			}			
 		}
-		var me:Users = new Users(param);
+		var me:User = new User(param);
 		me.get_info();
 		var data:Dynamic = 
 		{ 

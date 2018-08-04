@@ -2,7 +2,6 @@ package model;
 import haxe.ds.StringMap;
 import php.NativeArray;
 import haxe.extern.EitherType;
-import phprbac.Rbac;
 /**
  * ...
  * @author ...
@@ -15,12 +14,12 @@ typedef UserInfo =
 	@:optional var pass:String;
 }
  
-class User extends Model
+class Users extends Model
 {
 	
 	public static function create(param:StringMap<String>):EitherType<String,Bool>
 	{
-		var me:User = new User(param);
+		var me:Users = new Users(param);
 		return untyped __call__("json_encode",  me.globals, 64|256);//JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE
 	}
 	
