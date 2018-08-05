@@ -1,4 +1,4 @@
-package model;
+package model.contacts;
 import comments.CommentString.*;
 import haxe.ds.StringMap;
 import haxe.extern.EitherType;

@@ -1,4 +1,5 @@
 -lib CommentString
+-lib jwt
 -cp C:/www/remotion4.me/httpdocs/lib
 -cp lib
 -cp src

@@ -4,10 +4,10 @@ import haxe.extern.EitherType;
 import haxe.Json;
 import php.Lib;
 import php.NativeArray;
+import model.VicidialUsers;
 import model.*;
 import me.cunity.php.db.*;
 import sys.db.*;
-import model.Users;
 
 using Lambda;
 using Util;
@@ -352,7 +352,7 @@ class Model
 	
 	public  function query(sql:String):NativeArray
 	{
-		trace(sql);
+		trace(sql.split('password')[0]);
 		//var res:EitherType <MySQLi_Result , Bool > = S.my.real_query(sql, MySQLi.MYSQLI_USE_RESULT);
 		var ok:Bool = S.my.real_query(sql);
 		//if (res && sql.indexOf('UPDATE')==-1)
@@ -493,7 +493,7 @@ class Model
 	
 	public function json_encode():EitherType<String,Bool>
 	{	
-		data.agent = S.user;
+		data.agent = cast S.user;
 		data.globals = globals;
 		return untyped __call__("json_encode", data, 64|256);//JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE
 	}

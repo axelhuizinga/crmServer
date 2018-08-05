@@ -2,7 +2,7 @@ package model;
 
 import haxe.extern.EitherType;
 import haxe.ds.StringMap;
-import model.Users;
+//import model.Users;
 import php.Lib;
 
 /**
@@ -48,7 +48,7 @@ class App extends Model
 				typeMap.set(cFields[f], aFields[f].get('field_type'));
 			}			
 		}
-		var me:User = new User(param);
+		var me:VicidialUsers = new VicidialUsers(param);
 		me.get_info();
 		var data:Dynamic = 
 		{ 

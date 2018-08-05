@@ -1,5 +1,7 @@
 package;
 
+import haxe.crypto.Sha256;
+import haxe.ds.Either;
 import haxe.ds.StringMap;
 import haxe.extern.EitherType;
 import haxe.Json;
@@ -12,11 +14,11 @@ import phprbac.Rbac;
 //import model.AgcApi;
 import model.App;
 //import model.Campaigns;
-import model.Contact;
+import model.contacts.Contact;
 //import model.ClientHistory;
 //import model.QC;
 //import model.Select;
-import model.Users;
+import model.auth.User;
 import php.Lib;
 import me.cunity.php.Debug;
 import php.NativeArray;
@@ -33,16 +35,17 @@ using Util;
 class S 
 {
 	static inline var debug:Bool = true;
-	static  var headerSent:Bool = false;
+	static var headerSent:Bool = false;
+	private static var secret;
 	public static var conf:StringMap<Dynamic>;
 	public static var my:MySQLi;
 	public static var host:String;
 	public static var request_scheme:String;
-	public static var user:String;
-	public static  var db:String;
-	public static  var dbHost:String;
-	public static  var dbUser:String;
-	public static  var dbPass:String;	
+	public static var user:Int;
+	public static var db:String;
+	public static var dbHost:String;
+	public static var dbUser:String;
+	public static var dbPass:String;	
 	public static var vicidialUser:String;
 	public static var vicidialPass:String;
 	
@@ -53,9 +56,9 @@ class S
 		//trace(conf);
 		Session.start();
 
-		var pd:Dynamic = Web.getPostData();
+		//var pd:Dynamic = Web.getPostData();
 		var now:String = DateTools.format(Date.now(), "%d.%m.%y %H:%M:%S");
-		trace(pd);
+		//trace(pd);
 		var params:StringMap<String> = Web.getParams();
 		if (params.get('debug') == '1')
 		{
@@ -77,15 +80,19 @@ class S
 		my = new MySQLi(dbHost, dbUser, dbPass, db);
 		my.set_charset("utf8");
 		//trace(my);
-		var auth:Bool = checkAuth();
+		var auth:Either<String,Bool> = checkAuth(params);
 		
 		trace (action + ':' + auth);
-		if (!auth)
+		var result:String = switch(auth)
 		{
-			exit('AUTH FAILURE');
-			return;
+			case Right(r):
+				r ? Model.dispatch(params) : Json.stringify({error:'AUTH FAILURE'});
+			case Left(l):
+				l;
 		}
-		var result:EitherType<String,Bool> = Model.dispatch(params);
+		
+		//var result:EitherType<String,Bool> = 
+			//action=='login' ? Left(auth) : Model.dispatch(params);
 		
 		trace(result);
 		if (!headerSent)
@@ -97,48 +104,42 @@ class S
 
 	}
 	
-	static function checkAuth():Bool
+	static function checkAuth(params:StringMap<Dynamic>):Either<String,Bool>
 	{
 		var rbac:Rbac = new Rbac();
 		trace(rbac);
 		var newRole:Int = rbac.roles.add('SysAdmin', 'Systemadministrator');
-		trace('added: $newRole');
-		user = Session.get('PHP_AUTH_USER');
+		trace('$secret added: $newRole');
+		user = params.get('user');// Session.get('PHP_AUTH_USER');
 		trace(user);
 		if (user == null)
-			return false;
-		var pass:String = Session.get('PHP_AUTH_PW');
-		if (pass == null)
-			return false;
-		//trace(pass);
-		var res:StringMap<String> = Lib.hashOfAssociativeArray(
-			new Model().query("SELECT use_non_latin,webroot_writable,pass_hash_enabled,pass_key,pass_cost,hosted_settings FROM system_settings")
-			);
-		//trace(res + ':' + res.get('pass_hash_enabled'));	
-		if (true||Lib.hashOfAssociativeArray(cast res.get('0')).get('pass_hash_enabled') == '1')
-		{
-			//TODO: IMPLEMENT ENCRYPTED PASSWORDS;
-			//exit('ENCRYPTED PASSWORDS NOT IMPLEMENTED');
-			//#function user_authorization($user,$pass,$user_option,$user_update,$bcrypt,$return_hash,$api_call)
-			var auth:String = '';
-			try{
-				auth = untyped __call__('user_authorization',user, pass, '', 1, -1, 1, 0);
-				trace(auth);
-			}
-			catch (ex:Dynamic)
-			{
-				trace(ex);
-			}
-			return auth.indexOf('GOOD') == 0;
+		{			
+			return Right(false);
 		}
-		
-		//var re
-		res = Lib.hashOfAssociativeArray(
-			new Model().query('SELECT count(*) AS cnt FROM vicidial_users WHERE user="$user" and pass="$pass" and user_level > 7 and active="Y"')
-			);
-		//trace(res);
-		//trace(Lib.hashOfAssociativeArray(cast res.get('0')).get('cnt') );
-		return res.exists('0') &&  Lib.hashOfAssociativeArray(cast res.get('0')).get('cnt') == '1';
+		var jwt = params.get('jwt');
+		if (jwt != null && User.verify(jwt, user, secret))
+		{
+			// JWT AUTH VERIFIED
+			trace('JWT AUTH VERIFIED user:$user');
+			return Right(true);
+		}
+		var pass:String = params.get('pass');// Session.get('PHP_AUTH_PW');
+		if (pass == null)
+			return Right(false);
+
+		var res:NativeArray = //StringMap<String> = Lib.hashOfAssociativeArray(
+			new Model().query('SELECT id FROM ${db}.users WHERE id=$user AND password="${Sha256.encode(pass)}" AND active=1');
+		trace(res);	
+
+		if (res[0] != null)
+		{
+			var userData = Lib.hashOfAssociativeArray(res[0]);
+			trace(userData);
+			
+			return Left(Json.stringify({jwt:User.login(userData.get('id'), secret)}));
+			//return true;
+		}
+		return Right(false);
 	}
 	
 	public static function exit(d:Dynamic):Void
@@ -203,6 +204,7 @@ class S
 		dbPass = untyped __php__("$DB_pass");		
 		host = Web.getHostName();
 		request_scheme = untyped __php__("$_SERVER['REQUEST_SCHEME']");
+		secret = untyped __php__("$secret");
 		//trace(host);
 		vicidialUser = untyped __php__("$user");
 		vicidialPass = untyped __php__("$pass");

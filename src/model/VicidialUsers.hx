@@ -1,7 +1,7 @@
 package model;
+import haxe.ds.Either;
 import haxe.ds.StringMap;
 import php.NativeArray;
-import haxe.extern.EitherType;
 /**
  * ...
  * @author ...
@@ -14,13 +14,14 @@ typedef UserInfo =
 	@:optional var pass:String;
 }
  
-class Users extends Model
+class VicidialUsers extends Model
 {
 	
-	public static function create(param:StringMap<String>):EitherType<String,Bool>
+	public function new(param:StringMap<String>)
 	{
-		var me:Users = new Users(param);
-		return untyped __call__("json_encode",  me.globals, 64|256);//JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE
+		super(param);
+		//var me:VicidialUsers = new VicidialUsers(param);
+		//return untyped __call__("json_encode",  me.globals, 64|256);//JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE
 	}
 	
 	public function get_info(?user:String):Array<UserInfo>
