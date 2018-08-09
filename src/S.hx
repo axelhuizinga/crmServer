@@ -1,9 +1,7 @@
 package;
 
-import haxe.crypto.Sha256;
 import haxe.ds.Either;
 import haxe.ds.StringMap;
-import haxe.extern.EitherType;
 import haxe.Json;
 import me.cunity.debug.Out;
 import me.cunity.php.db.MySQLi;
@@ -12,10 +10,11 @@ import me.cunity.php.db.MySQLi_STMT;
 import me.cunity.php.Services_JSON;
 import phprbac.Rbac;
 //import model.AgcApi;
-import model.App;
+//import model.App;
 //import model.Campaigns;
 import model.contacts.Contact;
 //import model.ClientHistory;
+import Model.MData;
 //import model.QC;
 //import model.Select;
 import model.auth.User;
@@ -32,10 +31,17 @@ using Util;
  * @author axel@cunity.me
  */
 
+typedef Response =
+{
+	?content:Dynamic,
+	?error:Dynamic
+}
+
 class S 
 {
 	static inline var debug:Bool = true;
 	static var headerSent:Bool = false;
+	static var response:Dynamic;
 	private static var secret;
 	public static var conf:StringMap<Dynamic>;
 	public static var my:MySQLi;
@@ -54,12 +60,13 @@ class S
 		haxe.Log.trace = Debug._trace;	
 		conf =  Config.load('appData.js');
 		//trace(conf);
-		Session.start();
+		//Session.start();
 
 		//var pd:Dynamic = Web.getPostData();
 		var now:String = DateTools.format(Date.now(), "%d.%m.%y %H:%M:%S");
-		//trace(pd);
+		response = {content:[],error:[]};
 		var params:StringMap<String> = Web.getParams();
+		Web.setHeader("Access-Control-Allow-Origin", "*");
 		if (params.get('debug') == '1')
 		{
 			Web.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -67,89 +74,52 @@ class S
 			Lib.println('<div><pre>');
 			Lib.println(params);
 		}
-		trace(Date.now().toString());		
+		trace(Date.now().toString() + ' == $now' );		
 		trace(params);		
 
 		var action:String = params.get('action');
 		if (action.length == 0 || params.get('className') == null)
 		{
-			dump( { error:"required params missing" } );
-			return;
+			exit( { error:"required params action and/or className missing" } );
 		}
 			
 		my = new MySQLi(dbHost, dbUser, dbPass, db);
 		my.set_charset("utf8");
-		//trace(my);
-		var auth:Either<String,Bool> = checkAuth(params);
-		
-		trace (action + ':' + auth);
-		var result:String = switch(auth)
+
+		var jwt:String = params.get('jwt');
+		var user:Int = cast params.get('user');
+		if (jwt.length > 0)
 		{
-			case Right(r):
-				r ? Model.dispatch(params) : Json.stringify({error:'AUTH FAILURE'});
-			case Left(l):
-				l;
+			if(User.verify(jwt, user, secret))
+				Model.dispatch(params);			
 		}
 		
-		//var result:EitherType<String,Bool> = 
-			//action=='login' ? Left(auth) : Model.dispatch(params);
-		
-		trace(result);
-		if (!headerSent)
-		{
-			Web.setHeader('Content-Type', 'application/json');
-			headerSent = true;
-		}		
-		Lib.println( result);
+		var pass = params.get('pass');		
+		User.login(params, secret);		
+		exit(response);
 
 	}
 	
-	static function checkAuth(params:StringMap<Dynamic>):Either<String,Bool>
+	public static function add2Response(ob:Response, ex:Bool = false)
 	{
-		var rbac:Rbac = new Rbac();
-		trace(rbac);
-		var newRole:Int = rbac.roles.add('SysAdmin', 'Systemadministrator');
-		trace('$secret added: $newRole');
-		user = params.get('user');// Session.get('PHP_AUTH_USER');
-		trace(user);
-		if (user == null)
-		{			
-			return Right(false);
-		}
-		var jwt = params.get('jwt');
-		if (jwt != null && User.verify(jwt, user, secret))
+		if (ob.content != null)
+			response.content.push(ob.content);
+		if (ob.error != null)
+			response.error.push(ob.error);
+		if (ex)
 		{
-			// JWT AUTH VERIFIED
-			trace('JWT AUTH VERIFIED user:$user');
-			return Right(true);
+			exit(response);
 		}
-		var pass:String = params.get('pass');// Session.get('PHP_AUTH_PW');
-		if (pass == null)
-			return Right(false);
-
-		var res:NativeArray = //StringMap<String> = Lib.hashOfAssociativeArray(
-			new Model().query('SELECT id FROM ${db}.users WHERE id=$user AND password="${Sha256.encode(pass)}" AND active=1');
-		trace(res);	
-
-		if (res[0] != null)
-		{
-			var userData = Lib.hashOfAssociativeArray(res[0]);
-			trace(userData);
-			
-			return Left(Json.stringify({jwt:User.login(userData.get('id'), secret)}));
-			//return true;
-		}
-		return Right(false);
 	}
 	
-	public static function exit(d:Dynamic):Void
+	public static function exit(d:MData):Void
 	{
 		if (!headerSent)
 		{
 			Web.setHeader('Content-Type', 'application/json');
 			headerSent = true;
 		}			
-		var exitValue =  untyped __call__("json_encode", {'ERROR': d});
+		var exitValue =  untyped __call__("json_encode", d);
 		return untyped __call__("exit", exitValue);
 	}
 	

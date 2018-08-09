@@ -27,11 +27,12 @@ extern class Permission
  * Documentation for all PhpRbac related functionality.
  */
 
-@:native('\\PhpRbac\\Rbac')
- extern class Rbac
+@:native('PhpRbac\\Rbac')
+extern class Rbac
 {
-	@:native('Roles')
-	public var roles:Roles;
+	public var Roles:Roles;
+	public var Permissions:Permissions;
+	public var Users:Users;
 	
     public function new(unit_test:String='') : Void;
 

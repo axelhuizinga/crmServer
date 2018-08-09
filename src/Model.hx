@@ -26,15 +26,17 @@ typedef MData =
 {
 	@:optional var agent:String;
 	@:optional var count:Int;
+	@:optional var error:Dynamic;
 	@:optional var page:Int;
 	@:optional var editData:NativeArray;
 	@:optional var globals:Dynamic;
 	@:optional var rows:NativeArray;
-	@:optional var response:String;
+	@:optional var content:String;
 	@:optional var choice:NativeArray;
 	@:optional var fieldDefault:NativeArray;
 	@:optional var fieldNames:NativeArray;
 	@:optional var fieldRequired:NativeArray;
+	@:optional var jwt:String;
 	@:optional var optionsMap:NativeArray;
 	@:optional var recordings:NativeArray;
 	@:optional var typeMap:NativeArray;
@@ -43,12 +45,6 @@ typedef MData =
 
 class Model
 {
-	private static var KEYWORDS = {
-		var h = new haxe.ds.StringMap();
-		for( k in "ADD|ALL|ALTER|ANALYZE|AND|AS|ASC|ASENSITIVE|BEFORE|BETWEEN|BIGINT|BINARY|BLOB|BOTH|BY|CALL|CASCADE|CASE|CHANGE|CHAR|CHARACTER|CHECK|COLLATE|COLUMN|CONDITION|CONSTRAINT|CONTINUE|CONVERT|CREATE|CROSS|CURRENT_DATE|CURRENT_TIME|CURRENT_TIMESTAMP|CURRENT_USER|CURSOR|DATABASE|DATABASES|DAY_HOUR|DAY_MICROSECOND|DAY_MINUTE|DAY_SECOND|DEC|DECIMAL|DECLARE|DEFAULT|DELAYED|DELETE|DESC|DESCRIBE|DETERMINISTIC|DISTINCT|DISTINCTROW|DIV|DOUBLE|DROP|DUAL|EACH|ELSE|ELSEIF|ENCLOSED|ESCAPED|EXISTS|EXIT|EXPLAIN|FALSE|FETCH|FLOAT|FLOAT4|FLOAT8|FOR|FORCE|FOREIGN|FROM|FULLTEXT|GRANT|GROUP|HAVING|HIGH_PRIORITY|HOUR_MICROSECOND|HOUR_MINUTE|HOUR_SECOND|IF|IGNORE|IN|INDEX|INFILE|INNER|INOUT|INSENSITIVE|INSERT|INT|INT1|INT2|INT3|INT4|INT8|INTEGER|INTERVAL|INTO|IS|ITERATE|JOIN|KEY|KEYS|KILL|LEADING|LEAVE|LEFT|LIKE|LIMIT|LINES|LOAD|LOCALTIME|LOCALTIMESTAMP|LOCK|LONG|LONGBLOB|LONGTEXT|LOOP|LOW_PRIORITY|MATCH|MEDIUMBLOB|MEDIUMINT|MEDIUMTEXT|MIDDLEINT|MINUTE_MICROSECOND|MINUTE_SECOND|MOD|MODIFIES|NATURAL|NOT|NO_WRITE_TO_BINLOG|NULL|NUMERIC|ON|OPTIMIZE|OPTION|OPTIONALLY|OR|ORDER|OUT|OUTER|OUTFILE|PRECISION|PRIMARY|PROCEDURE|PURGE|READ|READS|REAL|REFERENCES|REGEXP|RELEASE|RENAME|REPEAT|REPLACE|REQUIRE|RESTRICT|RETURN|REVOKE|RIGHT|RLIKE|SCHEMA|SCHEMAS|SECOND_MICROSECOND|SELECT|SENSITIVE|SEPARATOR|SET|SHOW|SMALLINT|SONAME|SPATIAL|SPECIFIC|SQL|SQLEXCEPTION|SQLSTATE|SQLWARNING|SQL_BIG_RESULT|SQL_CALC_FOUND_ROWS|SQL_SMALL_RESULT|SSL|STARTING|STRAIGHT_JOIN|TABLE|TERMINATED|THEN|TINYBLOB|TINYINT|TINYTEXT|TO|TRAILING|TRIGGER|TRUE|UNDO|UNION|UNIQUE|UNLOCK|UNSIGNED|UPDATE|USAGE|USE|USING|UTC_DATE|UTC_TIME|UTC_TIMESTAMP|VALUES|VARBINARY|VARCHAR|VARCHARACTER|VARYING|WHEN|WHERE|WHILE|WITH|WRITE|XOR|YEAR_MONTH|ZEROFILL|ASENSITIVE|CALL|CONDITION|CONNECTION|CONTINUE|CURSOR|DECLARE|DETERMINISTIC|EACH|ELSEIF|EXIT|FETCH|GOTO|INOUT|INSENSITIVE|ITERATE|LABEL|LEAVE|LOOP|MODIFIES|OUT|READS|RELEASE|REPEAT|RETURN|SCHEMA|SCHEMAS|SENSITIVE|SPECIFIC|SQL|SQLEXCEPTION|SQLSTATE|SQLWARNING|TRIGGER|UNDO|UPGRADE|WHILE".split("|") )
-			h.set(k.toLowerCase(),true);
-		h;
-	}
 	public var data:MData;
 	public var db:String;
 	public var globals:Dynamic;
@@ -58,33 +54,34 @@ class Model
 	var joinTable:String;
 	var param:StringMap<Dynamic>;
 	
-	public static function dispatch(param:StringMap<Dynamic>):EitherType<String,Bool>
+	public static function dispatch(param:StringMap<Dynamic>):Void
 	{
 		var cl:Class<Dynamic> = Type.resolveClass('model.' + param.get('className'));
 		//trace(cl);
 		if (cl == null)
 		{
-			trace('model.'+param.get('className') + ' ???');
-			return false;
+			trace('model.' + param.get('className') + ' ???');
+			S.add2Response({error:{classError:'no model.' + cast param.get('className')}}, true);
+			//return false;
 		}
 		var fl:Dynamic = Reflect.field(cl, 'create');
 		//trace(fl);
 		if (fl == null)
 		{
 			trace(cl + 'create is null');
-			return false;
+			S.add2Response({error:{classError:cast cl + ' create is null'}}, true);
 		}
 		var iFields:Array<String> = Type.getInstanceFields(cl);
 		//trace(iFields);
 		if (iFields.has(param.get('action')))
 		{
 			trace('calling create ' + cl);
-			return Reflect.callMethod(cl, fl, [param]);
+			Reflect.callMethod(cl, fl, [param]);
 		}
 		else 
 		{
 			trace('not calling create ');
-			return false;
+			false;
 		}
 	}
 	
@@ -259,7 +256,7 @@ class Model
 		return fieldsWithFormat.join(',');
 	}
 	
-	public function find(param:StringMap<String>):EitherType<String,Bool>
+	public function find(param:StringMap<String>):Void
 	{	
 		var sqlBf:StringBuf = new StringBuf();
 		var phValues:Array<Array<Dynamic>> = new Array();
@@ -274,7 +271,7 @@ class Model
 			page: param.exists('page') ? Std.parseInt( param.get('page') ) : 1,
 			rows: doSelect(param, sqlBf, phValues)
 		};
-		return json_encode();
+		 json_encode();
 	}
 	
 	//public function execute(sql:String, param:StringMap<Dynamic>, ?phValues:Array<Array<Dynamic>>):NativeArray
@@ -368,7 +365,7 @@ class Model
 			trace(ok?'OK':'NOTOK' + S.my.error);
 		if (S.my.connect_error != null)
 			trace(S.my.connect_error);
-		return null;
+		return untyped __call__('array');
 	}
 	
 	public function buildCond(whereParam:String, sob:StringBuf, phValues:Array<Array<Dynamic>>, ?first:Bool=true):Bool
@@ -404,7 +401,7 @@ class Model
 			{
 				case 'BETWEEN':
 					if (!(values.length == 2) && values.foreach(function(s:String) return s.any2bool()))
-						S.exit( 'BETWEEN needs 2 values - got only:' + values.join(','));
+						S.exit( {error:'BETWEEN needs 2 values - got only:' + values.join(',')});
 					sqlBf.add(quoteField(wData[0]));
 					sqlBf.add(' BETWEEN ? AND ?');
 					phValues.push([wData[0], values[0]]);
@@ -477,8 +474,9 @@ class Model
 		return true;
 	}
 	
-	function quoteField(f : String) {
-		return KEYWORDS.exists(f.toLowerCase()) ? "`"+f+"`" : f;
+	function quoteField(f : String):String {
+		return f;
+		//return KEYWORDS.exists(f.toLowerCase()) ? "`"+f+"`" : f;
 	}	
 	
 	public function new(?param:StringMap<String>) {
@@ -491,16 +489,17 @@ class Model
 		}
 	}
 	
-	public function json_encode():EitherType<String,Bool>
+	public function json_encode():Void
 	{	
 		data.agent = cast S.user;
 		data.globals = globals;
-		return untyped __call__("json_encode", data, 64|256);//JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE
+		S.exit(data);
+		//return untyped __call__("json_encode", data, 64|256);//JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE
 	}
 	
-	public function json_response(res:String):EitherType<String,Bool>
+	public function json_response(res:String):String
 	{
-		return untyped __call__("json_encode", {response:res}, 64);//JSON_UNESCAPED_SLASHES
+		return untyped __call__("json_encode", {content:res}, 64);//JSON_UNESCAPED_SLASHES
 	}
 	
 	function getEditorFields(?table_name:String):StringMap<Array<StringMap<String>>>

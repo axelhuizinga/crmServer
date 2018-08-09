@@ -5,7 +5,7 @@ import haxe.extern.EitherType;
  * ...
  * @author axel@bi4.me
  */
-@:native('\\PhpRbac\\Rbac\\Roles')
+@:native('PhpRbac\\Rbac\\Roles')
 extern class Roles extends Entity
 {
 

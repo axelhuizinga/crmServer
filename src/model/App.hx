@@ -12,12 +12,12 @@ import php.Lib;
 class App extends Model
 {
 
-	public static function create(param:StringMap<String>):EitherType<String,Bool>
+	public static function create(param:StringMap<String>):Void
 	{
-		return untyped __call__("json_encode", new App(param).getGlobals(param), 64|256);//JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE
+		return untyped __call__("json_encode", new App(param).getGlobals(), 64|256);//JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE
 	}
 	
-	public function getGlobals(param:StringMap<String>):Dynamic
+	public function getGlobals():Dynamic
 	{
 		var fieldNames:StringMap<String> = new StringMap();
 		var typeMap:StringMap<String> = new StringMap();

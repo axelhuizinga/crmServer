@@ -21,7 +21,7 @@ typedef NodeObj =
 	ID: Int
 }
 
-@:native('\\PhpRbac\\Rbac\\Entity')
+@:native('PhpRbac\\Rbac\\Entity')
 extern class Entity 
 {
 

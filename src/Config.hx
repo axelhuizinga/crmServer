@@ -1,7 +1,7 @@
 package;
 import haxe.ds.StringMap;
-//import haxe.Json;
-import me.cunity.php.Services_JSON;
+import tjson.TJSON;
+//import me.cunity.php.Services_JSON;
 import StringTools;
 using StringTools;
 /**
@@ -18,11 +18,10 @@ class Config
 		vars.shift();
 		var result:StringMap<Dynamic> = new StringMap();
 		trace(vars.length);
-		var jsonS:Services_JSON = new Services_JSON(Services_JSON.SERVICES_JSON_LOOSE_TYPE|Services_JSON.SERVICES_JSON_SUPPRESS_ERRORS);
 		for (v in vars)
 		{
 			var data:Array<String> = v.split('=');
-			var json:Dynamic = jsonS.decode(data[1]);
+			var json:Dynamic = TJSON.parse(data[1]);
 			result.set(data[0].trim(), json);
 		}		
 		return result;

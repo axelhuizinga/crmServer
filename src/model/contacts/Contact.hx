@@ -91,16 +91,16 @@ typedef CustomField =
 		//return execute(sqlBf.toString(), q, phValues);
 	}
 	
-	public static function create(param:StringMap<String>):EitherType<String,Bool>
+	public static function create(param:StringMap<String>):Void
 	{
 		var self:Contact = new Contact(param);	
 		self.table = 'vicidial_list';
 		//self.param = param;
 		//trace(param);
-		return Reflect.callMethod(self, Reflect.field(self,param.get('action')), [param]);
+		Reflect.callMethod(self, Reflect.field(self,param.get('action')), [param]);
 	}
 	
-	override public function find(param:StringMap<String>):EitherType<String,Bool>
+	override public function find(param:StringMap<String>):Void
 	{	
 		var sqlBf:StringBuf = new StringBuf();
 		var phValues:Array<Array<Dynamic>> = new Array();
@@ -115,13 +115,13 @@ typedef CustomField =
 			page:(param.exists('page') ? Std.parseInt( param.get('page') ) : 1),
 			rows: doJoin(param, sqlBf, phValues)
 		};
-		return json_encode();
+		 json_encode();
 	}	
 	
-	public function edit(param:StringMap<Dynamic>):EitherType<String,Bool>
+	public function edit(param:StringMap<Dynamic>):Void
 	{
 		
-		return json_encode();		
+		 json_encode();		
 	}
 	
 	function getRecordings(lead_id:Int):NativeArray

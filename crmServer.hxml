@@ -1,10 +1,11 @@
 -lib CommentString
 -lib jwt
+-lib tjson
 -cp C:/www/remotion4.me/httpdocs/lib
 -cp lib
 -cp src
 -php bin
--D " php7"
+-D php7
 -main S
 --php-front server.php
 -dce std
