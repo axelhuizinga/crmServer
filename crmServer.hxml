@@ -7,5 +7,4 @@
 -php bin
 -D php7
 -main S
---php-front server.php
 -dce std

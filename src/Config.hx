@@ -1,5 +1,10 @@
 package;
 import haxe.ds.StringMap;
+import php.Lib;
+import php.Syntax;
+import php.Web;
+import sys.FileSystem;
+import sys.io.File;
 import tjson.TJSON;
 //import me.cunity.php.Services_JSON;
 import StringTools;
@@ -12,7 +17,8 @@ class Config
 {
 	public static function load(cjs:String) :StringMap<Dynamic>
 	{
-		var js:String = untyped __call__("file_get_contents", cjs);
+		var js:String = File.getContent(cjs);
+		//Syntax.("file_get_contents", cjs);
 		//trace(js);
 		var vars:Array<String> = js.split('var');
 		vars.shift();

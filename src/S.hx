@@ -4,16 +4,19 @@ import haxe.ds.Either;
 import haxe.ds.StringMap;
 import haxe.Json;
 import me.cunity.debug.Out;
-import me.cunity.php.db.MySQLi;
-import me.cunity.php.db.MySQLi_Result;
-import me.cunity.php.db.MySQLi_STMT;
+import php.Syntax;
+import php.db.PDO;
+import php.db.PDOStatement;
+//import me.cunity.php.db.MySQLi;
+//import me.cunity.php.db.MySQLi_Result;
+//import me.cunity.php.db.MySQLi_STMT;
 import me.cunity.php.Services_JSON;
 import phprbac.Rbac;
 //import model.AgcApi;
 //import model.App;
 //import model.Campaigns;
 import model.contacts.Contact;
-//import model.ClientHistory;
+import model.admin.CreateHistoryTrigger;
 import Model.MData;
 //import model.QC;
 //import model.Select;
@@ -42,9 +45,9 @@ class S
 	static inline var debug:Bool = true;
 	static var headerSent:Bool = false;
 	static var response:Dynamic;
-	private static var secret;
+	public static var secret;
 	public static var conf:StringMap<Dynamic>;
-	public static var my:MySQLi;
+	public static var my:PDO;
 	public static var host:String;
 	public static var request_scheme:String;
 	public static var user:Int;
@@ -83,18 +86,18 @@ class S
 			exit( { error:"required params action and/or className missing" } );
 		}
 			
-		my = new MySQLi(dbHost, dbUser, dbPass, db);
-		my.set_charset("utf8");
-
+		my = new PDO('pgsql:host=$dbHost;dbname=$db',dbUser,dbPass,Syntax.array(['client_encoding','UTF8']));
+		//my.set_charset("utf8");
+		trace(my);
 		var jwt:String = params.get('jwt');
 		var user:Int = cast params.get('user');
 		if (jwt.length > 0)
 		{
-			if(User.verify(jwt, user, secret))
+			if(User.verify(jwt, user))
 				Model.dispatch(params);			
 		}
 		
-		var pass = params.get('pass');		
+		//var pass = params.get('pass');		
 		User.login(params, secret);		
 		exit(response);
 
@@ -119,8 +122,11 @@ class S
 			Web.setHeader('Content-Type', 'application/json');
 			headerSent = true;
 		}			
-		var exitValue =  untyped __call__("json_encode", d);
-		return untyped __call__("exit", exitValue);
+		//var exitValue =  
+		Sys.print(Json.stringify(d));
+		Sys.exit(0);
+		/**/
+		//return untyped __call__("exit", exitValue);
 	}
 	
 	public static function dump(d:Dynamic):Void
@@ -140,21 +146,21 @@ class S
 	}
 	
 	public static function newMemberID():Int {
-		var res:MySQLi_Result = S.my.query(
+		var stmt:PDOStatement = S.my.query(
 			'SELECT  MAX(CAST(vendor_lead_code AS UNSIGNED)) FROM vicidial_list WHERE list_id=10000'
 			);
-		return (res.num_rows==0 ? 1:  Std.parseInt(res.fetch_array(MySQLi.MYSQLI_NUM)[0])+1);
+		return (stmt.rowCount()==0 ? 1: stmt.fetch(PDO.FETCH_COLUMN)+1);
 	}
 	
 	public static function tableFields(table:String, db:String = 'asterisk'): Array<String>
 	{		
-		var res:MySQLi_Result = S.my.query(
+		var stmt:PDOStatement = S.my.query(
 			'SELECT GROUP_CONCAT(COLUMN_NAME) FROM information_schema.columns WHERE table_schema = "$db" AND table_name = "$table";');
-		if (res.any2bool() && res.num_rows == 1)
+		if (stmt.rowCount() == 1)
 		{
 			//trace(res.fetch_array(MySQLi.MYSQLI_NUM)[0]);
 			//return 'lead_id,anrede,co_field,geburts_datum,iban,blz,bank_name,spenden_hoehe,period,start_monat,buchungs_zeitpunkt,start_date'.split(',');
-			return res.fetch_array(MySQLi.MYSQLI_NUM)[0].split(',');
+			return stmt.fetchColumn().split(',');
 		}
 		return null;
 	}

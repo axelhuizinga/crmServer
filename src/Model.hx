@@ -7,6 +7,9 @@ import php.NativeArray;
 import model.VicidialUsers;
 import model.*;
 import me.cunity.php.db.*;
+import php.Syntax;
+import php.db.PDO;
+import php.db.PDOStatement;
 import sys.db.*;
 
 using Lambda;
@@ -39,6 +42,7 @@ typedef MData =
 	@:optional var jwt:String;
 	@:optional var optionsMap:NativeArray;
 	@:optional var recordings:NativeArray;
+	@:optional var tableNames:Array<String>;
 	@:optional var typeMap:NativeArray;
 	@:optional var userMap:Array<UserInfo>;
 };
@@ -61,7 +65,7 @@ class Model
 		if (cl == null)
 		{
 			trace('model.' + param.get('className') + ' ???');
-			S.add2Response({error:{classError:'no model.' + cast param.get('className')}}, true);
+			S.add2Response({error:{classError:' cannot find model.' + cast param.get('className')}}, true);
 			//return false;
 		}
 		var fl:Dynamic = Reflect.field(cl, 'create');
@@ -95,7 +99,7 @@ class Model
 		var joinCond:String = (q.get('joincond').any2bool() ? q.get('joincond') : null);
 		var joinTable:String = (q.get('jointable').any2bool() ? q.get('jointable') : null);
 
-		sqlBf.add(' FROM ' + S.my.real_escape_string(qTable));		
+		sqlBf.add(' FROM ' + S.my.quote(qTable));		
 		var where:String = q.get('where');
 		if (where != null)
 			buildCond(where, sqlBf, phValues);
@@ -118,11 +122,11 @@ class Model
 		var filterTables:String = '';
 		if (q.get('filter').any2bool() )
 		{
-			filterTables = q.get('filter_tables').split(',').map(function(f:String) return 'fly_crm.' + S.my.real_escape_string(f)).join(',');			
-			sqlBf.add(' FROM $filterTables,' + S.my.real_escape_string(qTable));
+			filterTables = q.get('filter_tables').split(',').map(function(f:String) return 'fly_crm.' + S.my.quote(f)).join(',');			
+			sqlBf.add(' FROM $filterTables,' + S.my.quote(qTable));
 		}
 		else
-			sqlBf.add(' FROM ' + S.my.real_escape_string(qTable));		
+			sqlBf.add(' FROM ' + S.my.quote(qTable));		
 		
 		if (joinTable != null)
 			sqlBf.add(' INNER JOIN $joinTable');
@@ -134,7 +138,7 @@ class Model
 		// add filter conditions
 		if (q.get('filter').any2bool())
 		{			
-			buildCond(q.get('filter').split(',').map( function(f:String) return 'fly_crm.' + S.my.real_escape_string(f) 
+			buildCond(q.get('filter').split(',').map( function(f:String) return 'fly_crm.' + S.my.quote(f) 
 			).join(','), sqlBf, phValues, false);
 			if (joinTable == 'vicidial_users')
 				sqlBf.add(' ' + filterTables.split(',').map(function(f:String) return 'AND $f.client_id=vicidial_list.vendor_lead_code').join(' '));
@@ -152,19 +156,19 @@ class Model
 		var fields:String = q.get('fields');		
 		trace ('table:' + q.get('table') + ':' + (q.get('table').any2bool() ? q.get('table') : table));
 		//sqlBf.add('SELECT ' + fieldFormat((fields != null ? fields.split(',').map(function(f:String) return quoteField(f)).join(',') : '*' )));
-		sqlBf.add('SELECT ' + (fields != null ? fieldFormat( fields.split(',').map(function(f:String) return S.my.real_escape_string(f)).join(',') ): '*' ));
+		sqlBf.add('SELECT ' + (fields != null ? fieldFormat( fields.split(',').map(function(f:String) return S.my.quote(f)).join(',') ): '*' ));
 		var qTable:String = (q.get('table').any2bool() ? q.get('table') : table);
 		var joinCond:String = (q.get('joincond').any2bool() ? q.get('joincond') : null);
 		var joinTable:String = (q.get('jointable').any2bool() ? q.get('jointable') : null);
 		var filterTables:String = '';
 		if (q.get('filter').any2bool() )
 		{
-			filterTables = q.get('filter_tables').split(',').map(function(f:String) return 'fly_crm.' + S.my.real_escape_string(f)).join(',');			
-			sqlBf.add(' FROM $filterTables,' + S.my.real_escape_string(qTable));
+			filterTables = q.get('filter_tables').split(',').map(function(f:String) return 'fly_crm.' + S.my.quote(f)).join(',');			
+			sqlBf.add(' FROM $filterTables,' + S.my.quote(qTable));
 		}
 		else
-			sqlBf.add(' FROM ' + S.my.real_escape_string(qTable));		
-		//sqlBf.add(' FROM ' + S.my.real_escape_string(qTable));		
+			sqlBf.add(' FROM ' + S.my.quote(qTable));		
+		//sqlBf.add(' FROM ' + S.my.quote(qTable));		
 		if (joinTable != null)
 			sqlBf.add(' INNER JOIN $joinTable');
 		if (joinCond != null)
@@ -175,7 +179,7 @@ class Model
 			
 		if (q.get('filter').any2bool())
 		{			
-			buildCond(q.get('filter').split(',').map( function(f:String) return 'fly_crm.' + S.my.real_escape_string(f) 
+			buildCond(q.get('filter').split(',').map( function(f:String) return 'fly_crm.' + S.my.quote(f) 
 			).join(','), sqlBf, phValues, false);
 						
 			if (joinTable == 'vicidial_users')
@@ -203,11 +207,11 @@ class Model
 		var fields:String = q.get('fields');		
 		trace ('table:' + q.get('table') + ':' + (q.get('table').any2bool() ? q.get('table') : table));
 		//sqlBf.add('SELECT ' + fieldFormat((fields != null ? fields.split(',').map(function(f:String) return quoteField(f)).join(',') : '*' )));
-		//sqlBf.add('SELECT ' + (fields != null ? fieldFormat( fields.split(',').map(function(f:String) return S.my.real_escape_string(f)).join(',') ): '*' ));
+		//sqlBf.add('SELECT ' + (fields != null ? fieldFormat( fields.split(',').map(function(f:String) return S.my.quote(f)).join(',') ): '*' ));
 		sqlBf.add('SELECT ' + (fields != null ? fieldFormat(fields): '*' ));
 		var qTable:String = (q.get('table').any2bool() ? q.get('table') : table);
 		//TODO: JOINS
-		sqlBf.add(' FROM ' + S.my.real_escape_string(qTable));		
+		sqlBf.add(' FROM ' + S.my.quote(qTable));		
 		var where:String = q.get('where');
 		if (where != null)
 			buildCond(where, sqlBf, phValues);
@@ -245,12 +249,12 @@ class Model
 				var format:Array<String> = dbQueryFormats.get(f);
 				//trace(format);
 				if (format[0] == 'ALIAS')
-				fieldsWithFormat.push(S.my.real_escape_string( f ) + ' AS ' + format[1]);	
+				fieldsWithFormat.push(S.my.quote( f ) + ' AS ' + format[1]);	
 				else
-				fieldsWithFormat.push(format[0] + '(' + S.my.real_escape_string(f) + ', "' + format[1] + '") AS `' + f + '`');
+				fieldsWithFormat.push(format[0] + '(' + S.my.quote(f) + ', "' + format[1] + '") AS `' + f + '`');
 			}
 			else
-				fieldsWithFormat.push(S.my.real_escape_string( f ));				
+				fieldsWithFormat.push(S.my.quote( f ));				
 		}
 		//trace(fieldsWithFormat);
 		return fieldsWithFormat.join(',');
@@ -278,86 +282,99 @@ class Model
 	public function execute(sql:String, ?phValues:Array<Array<Dynamic>>):NativeArray
 	{
 		trace(sql);	
-		var stmt =  S.my.stmt_init();
+		var stmt:PDOStatement =  S.my.prepare(sql, null);
 		//var success:Bool = stmt.prepare(sql);
-		var success:EitherType<MySQLi_STMT ,Bool> = stmt.prepare(sql);
-		trace (success);
-		if (!success)
+		//var success:EitherType<MySQLi_STMT ,Bool> = stmt.prepare(sql);
+		var error:String = S.my.errorCode();
+		trace (error);
+		if (error=='')
 		{
-			trace(stmt.error);
+			trace(stmt.errorInfo());
 			return null;
 		}		
 		var bindTypes:String = '';
 		var values2bind:NativeArray = null;
-		var dbFieldTypes:StringMap<String> =  Lib.hashOfAssociativeArray(Lib.associativeArrayOfObject(S.conf.get('dbFieldTypes')));
+		//var dbFieldTypes:StringMap<String> =  Lib.hashOfAssociativeArray(Lib.associativeArrayOfObject(S.conf.get('dbFieldTypes')));
 		
 		var qObj:Dynamic = { };
 		//var qVars:String = 'qVar_';
 		var i:Int = 0;
 		for (ph in phValues)
 		{
-			var type:String = dbFieldTypes.get(ph[0]);
-			bindTypes += (type.any2bool()  ?  type : 's');
-			values2bind[i++] = ph[1];
-		}
-
-		trace(Std.string(values2bind));
-		if (phValues.length > 0)
-		{
-			success = untyped __call__('myBindParam', stmt, values2bind, bindTypes);
-			trace ('success:' + success);
-			if (success)
+			var type:Int = PDO.PARAM_STR; //dbFieldTypes.get(ph[0]);
+			//bindTypes += (type.any2bool()  ?  type : 's');
+			//values2bind[i++] = ph[1];
+			if (!stmt.bindParam(i, ph[1], type))
 			{
-				//var fieldNames:Array<String> =  param.get('fields').split(',');
-				var data:NativeArray = null;
-				success = stmt.execute();
-				if (!success)
-				{
-					trace(stmt.error);
-					return null;
-				}
-				
-				var result:EitherType<MySQLi_Result,Bool> = stmt.get_result();
-				if (result)
-				{
-					num_rows = cast(result, MySQLi_Result).num_rows;
-					data = cast(result, MySQLi_Result).fetch_all(MySQLi.MYSQLI_ASSOC);
-				}			
-				return(data);		
-			}			
+				trace('ooops:' + stmt.errorInfo());
+				Sys.exit(0);
+			}
 		}
-		else {
-			var data:NativeArray = null;
+		
+		var data:NativeArray = null;
+		var success: Bool;
+		if (phValues.length > 0)
+		{			
+			//var fieldNames:Array<String> =  param.get('fields').split(',');
 			success = stmt.execute();
 			if (!success)
 			{
-				trace(stmt.error);
+				trace(stmt.errorInfo());
+				return null;
+			}
+			num_rows = stmt.rowCount();
+			if (num_rows>0)
+			{
+				data = stmt.fetchAll(PDO.FETCH_ASSOC);
+			}			
+			return(data);		
+		}
+		else {
+			success = stmt.execute();
+			if (!success)
+			{
+				trace(stmt.errorInfo());
 				return untyped __call__("array", 'ERROR', stmt.error);
 			}
-			var result:EitherType<MySQLi_Result,Bool> = stmt.get_result();
-			if (result)
+			//var result:EitherType<MySQLi_Result,Bool> = stmt.get_result();
+			num_rows = stmt.rowCount();
+			if (num_rows>0)
 			{
-				var res:MySQLi_Result = cast(result, MySQLi_Result);
-				num_rows = res.num_rows;
-				data = res.fetch_all(MySQLi.MYSQLI_ASSOC);				
+				data = stmt.fetchAll(PDO.FETCH_ASSOC);				
 			}			
 			return(data);	
 		}
-
-		return untyped __call__("array", 'ERROR', stmt.error);
+		return Syntax.assocDecl({'ERROR': stmt.errorInfo()});
+		//return untyped __call__("array", 'ERROR', stmt.error);
 	}
 	
-	public  function query(sql:String):NativeArray
+	public  function query(sql:String, ?resultType):NativeArray
 	{
 		trace(sql.split('password')[0]);
+		if (resultType == null)
+			resultType = PDO.FETCH_ASSOC;
 		//var res:EitherType <MySQLi_Result , Bool > = S.my.real_query(sql, MySQLi.MYSQLI_USE_RESULT);
-		var ok:Bool = S.my.real_query(sql);
+		//new NativeArray();
+		var stm:PDOStatement = S.my.query(sql);
+		if (! untyped stm)
+		{
+			trace(S.my.errorInfo());
+			Sys.exit(0);
+		}
+		stm.execute();
+		trace(stm);
+		var res:NativeArray = stm.fetchAll(resultType);
+		Syntax.foreach(res, function(key:String, value:Dynamic){
+			trace('$key => $value'); 
+			res[key] = value;
+		});
+		return res;/*
 		//if (res && sql.indexOf('UPDATE')==-1)
 		if (ok && S.my.field_count > 0)
 		{
 			var res:MySQLi_Result = S.my.store_result();
 			trace(res);
-			var data:NativeArray = res.fetch_all(MySQLi.MYSQLI_ASSOC);
+			var data:NativeArray = res.fetch_all(resultType);
 			res.free();
 			return(data);		
 		}
@@ -365,7 +382,7 @@ class Model
 			trace(ok?'OK':'NOTOK' + S.my.error);
 		if (S.my.connect_error != null)
 			trace(S.my.connect_error);
-		return untyped __call__('array');
+		return untyped __call__('array');*/
 	}
 	
 	public function buildCond(whereParam:String, sob:StringBuf, phValues:Array<Array<Dynamic>>, ?first:Bool=true):Bool
@@ -510,7 +527,7 @@ class Model
 		param.set('table', 'fly_crm.editor_fields');
 		
 		param.set('where', 'field_cost|>-2' + (table_name != null ? 
-		',table_name|' + S.my.real_escape_string(table_name): ''));
+		',table_name|' + S.my.quote(table_name): ''));
 		param.set('fields', 'field_name,field_label,field_type,field_options,table_name');
 		param.set('order', 'table_name,field_rank,field_order');
 		param.set('limit', '100');
