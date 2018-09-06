@@ -37,14 +37,15 @@ using Util;
 typedef Response =
 {
 	?content:Dynamic,
-	?error:Dynamic
+	?error:Dynamic,
+	?data:MData
 }
 
 class S 
 {
 	static inline var debug:Bool = true;
 	static var headerSent:Bool = false;
-	static var response:Dynamic;
+	static var response:Response;
 	public static var secret;
 	public static var conf:StringMap<Dynamic>;
 	public static var my:PDO;
@@ -70,13 +71,6 @@ class S
 		response = {content:[],error:[]};
 		var params:StringMap<String> = Web.getParams();
 		Web.setHeader("Access-Control-Allow-Origin", "*");
-		if (params.get('debug') == '1')
-		{
-			Web.setHeader('Content-Type', 'text/html; charset=utf-8');
-			headerSent = true;
-			Lib.println('<div><pre>');
-			Lib.println(params);
-		}
 		trace(Date.now().toString() + ' == $now' );		
 		trace(params);		
 
@@ -109,13 +103,14 @@ class S
 			response.content.push(ob.content);
 		if (ob.error != null)
 			response.error.push(ob.error);
-		if (ex)
+		if (ex || ob.data != null)
 		{
+			response.data = ob.data;
 			exit(response);
 		}
 	}
 	
-	public static function exit(d:MData):Void
+	public static function exit(r:Dynamic):Void
 	{
 		if (!headerSent)
 		{
@@ -123,10 +118,8 @@ class S
 			headerSent = true;
 		}			
 		//var exitValue =  
-		Sys.print(Json.stringify(d));
-		Sys.exit(0);
-		/**/
-		//return untyped __call__("exit", exitValue);
+		Sys.print(Json.stringify(r));
+		Sys.exit(0);		
 	}
 	
 	public static function dump(d:Dynamic):Void
@@ -142,7 +135,7 @@ class S
 	
 	public static function edump(d:Dynamic):Void
 	{
-		untyped __call__("edump", d);
+		Syntax.code("edump({0})", d);
 	}
 	
 	public static function newMemberID():Int {
@@ -158,32 +151,30 @@ class S
 			'SELECT GROUP_CONCAT(COLUMN_NAME) FROM information_schema.columns WHERE table_schema = "$db" AND table_name = "$table";');
 		if (stmt.rowCount() == 1)
 		{
-			//trace(res.fetch_array(MySQLi.MYSQLI_NUM)[0]);
-			//return 'lead_id,anrede,co_field,geburts_datum,iban,blz,bank_name,spenden_hoehe,period,start_monat,buchungs_zeitpunkt,start_date'.split(',');
 			return stmt.fetchColumn().split(',');
 		}
 		return null;
 	}
 	
 	static function __init__() {
-		untyped __call__('require_once', '../.crm/db.php');
-		untyped __call__('require_once', '../.crm/functions.php');
-		untyped __call__('require_once', 'inc/PhpRbac/Rbac.php');
+		untyped Syntax.code('require_once({0})', '../.crm/db.php');
+		untyped Syntax.code('require_once({0})', '../.crm/functions.php');
+		untyped Syntax.code('require_once({0})', 'inc/PhpRbac/Rbac.php');
 		//untyped __call__('require_once', '../../crm/loadAstguiclientConf.php');
 		//untyped __call__('require_once', '../agc/functions.fix.php');
-		Debug.logFile = untyped __php__("$appLog");
+		Debug.logFile = untyped Syntax.code("$appLog");
 		//edump(Debug.logFile);
 		//Debug.logFile = untyped __var__("GLOBALS","appLog");
-		db = untyped __php__("$DB");
-		dbHost = untyped __php__("$DB_server");
-		dbUser = untyped __php__("$DB_user");
-		dbPass = untyped __php__("$DB_pass");		
+		db = Syntax.code("$DB");
+		dbHost = Syntax.code("$DB_server");
+		dbUser = Syntax.code("$DB_user");
+		dbPass = Syntax.code("$DB_pass");		
 		host = Web.getHostName();
-		request_scheme = untyped __php__("$_SERVER['REQUEST_SCHEME']");
-		secret = untyped __php__("$secret");
+		request_scheme = Syntax.code("$_SERVER['REQUEST_SCHEME']");
+		secret = Syntax.code("$secret");
 		//trace(host);
-		vicidialUser = untyped __php__("$user");
-		vicidialPass = untyped __php__("$pass");
+		vicidialUser = Syntax.code("$user");
+		vicidialPass = Syntax.code("$pass");
 	}
 
 }

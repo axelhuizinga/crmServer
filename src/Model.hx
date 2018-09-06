@@ -19,15 +19,9 @@ using Util;
  * @author axel@cunity.me
  */
 
-typedef MConfig = 
-{
-	var table:String;
-	
-}
- 
+
 typedef MData = 
 {
-	@:optional var agent:String;
 	@:optional var count:Int;
 	@:optional var error:Dynamic;
 	@:optional var page:Int;
@@ -45,6 +39,7 @@ typedef MData =
 	@:optional var tableNames:Array<String>;
 	@:optional var typeMap:NativeArray;
 	@:optional var userMap:Array<UserInfo>;
+	@:optional var user:Int;
 };
 
 class Model
@@ -303,7 +298,7 @@ class Model
 		{
 			var type:Int = PDO.PARAM_STR; //dbFieldTypes.get(ph[0]);
 			//bindTypes += (type.any2bool()  ?  type : 's');
-			//values2bind[i++] = ph[1];
+			values2bind[i++] = ph[1];
 			if (!stmt.bindParam(i, ph[1], type))
 			{
 				trace('ooops:' + stmt.errorInfo());
@@ -316,7 +311,7 @@ class Model
 		if (phValues.length > 0)
 		{			
 			//var fieldNames:Array<String> =  param.get('fields').split(',');
-			success = stmt.execute();
+			success = stmt.execute(values2bind);
 			if (!success)
 			{
 				trace(stmt.errorInfo());
@@ -330,11 +325,11 @@ class Model
 			return(data);		
 		}
 		else {
-			success = stmt.execute();
+			success = stmt.execute(new NativeArray());
 			if (!success)
 			{
 				trace(stmt.errorInfo());
-				return untyped __call__("array", 'ERROR', stmt.error);
+				return untyped Syntax.code("array({0}, {1})", 'ERROR', stmt.error);
 			}
 			//var result:EitherType<MySQLi_Result,Bool> = stmt.get_result();
 			num_rows = stmt.rowCount();
@@ -361,28 +356,14 @@ class Model
 			trace(S.my.errorInfo());
 			Sys.exit(0);
 		}
-		stm.execute();
+		stm.execute(new NativeArray());
 		trace(stm);
 		var res:NativeArray = stm.fetchAll(resultType);
 		Syntax.foreach(res, function(key:String, value:Dynamic){
 			trace('$key => $value'); 
 			res[key] = value;
 		});
-		return res;/*
-		//if (res && sql.indexOf('UPDATE')==-1)
-		if (ok && S.my.field_count > 0)
-		{
-			var res:MySQLi_Result = S.my.store_result();
-			trace(res);
-			var data:NativeArray = res.fetch_all(resultType);
-			res.free();
-			return(data);		
-		}
-		else
-			trace(ok?'OK':'NOTOK' + S.my.error);
-		if (S.my.connect_error != null)
-			trace(S.my.connect_error);
-		return untyped __call__('array');*/
+		return res;
 	}
 	
 	public function buildCond(whereParam:String, sob:StringBuf, phValues:Array<Array<Dynamic>>, ?first:Bool=true):Bool
@@ -498,6 +479,8 @@ class Model
 	
 	public function new(?param:StringMap<String>) {
 		this.param = param;
+		data = {};
+		data.rows = new NativeArray();
 		if (param != null && param.get('firstLoad') == 'true')
 		{
 			trace('firstLoad');
@@ -508,15 +491,14 @@ class Model
 	
 	public function json_encode():Void
 	{	
-		data.agent = cast S.user;
+		data.user = S.user;
 		data.globals = globals;
-		S.exit(data);
-		//return untyped __call__("json_encode", data, 64|256);//JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE
+		S.add2Response({data:data});
 	}
 	
 	public function json_response(res:String):String
 	{
-		return untyped __call__("json_encode", {content:res}, 64);//JSON_UNESCAPED_SLASHES
+		return Syntax.code("json_encode({0},{1})", {content:res}, 64);//JSON_UNESCAPED_SLASHES
 	}
 	
 	function getEditorFields(?table_name:String):StringMap<Array<StringMap<String>>>

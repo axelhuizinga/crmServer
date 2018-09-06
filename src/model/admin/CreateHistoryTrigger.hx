@@ -1,6 +1,7 @@
 package model.admin;
 
 import haxe.ds.StringMap;
+import haxe.extern.EitherType;
 import php.Lib;
 import php.NativeArray;
 import me.cunity.php.db.*;
@@ -8,6 +9,7 @@ import php.db.PDOStatement;
 import sys.db.*;
 import comments.CommentString.*;
 using Lambda;
+using Util;
 
 /**
  * ...
@@ -21,14 +23,18 @@ class CreateHistoryTrigger extends Model
 	{
 		var self:CreateHistoryTrigger = new CreateHistoryTrigger(param);	
 		self.table = 'columns';
-		//self.param = param;
-		//trace(param);
 		Reflect.callMethod(self, Reflect.field(self,param.get('action')), [param]);
 	}
 
 	public function run():Void
 	{
-		var getTableNames:PDOStatement = S.my.query('SELECT GROUP_CONCAT(TABLE_NAME) AS "tableNames" FROM information_schema.`TABLES` WHERE `TABLE_SCHEMA` LIKE "crm" AND TABLE_NAME NOT LIKE "\\_%" GROUP BY TABLE_SCHEMA');
+		var sql:String = comment(unindent, format) /*
+			SELECT string_agg(table_name, ',')
+			FROM information_schema.tables 
+			WHERE table_schema LIKE 'crm' GROUP BY (table_schema)
+		*/;
+		//trace(sql);
+		var getTableNames:PDOStatement = S.my.query(sql);
 		if (!untyped getTableNames)
 		{
 			trace(S.my.errorInfo());
@@ -36,45 +42,48 @@ class CreateHistoryTrigger extends Model
 		}
 		getTableNames.execute();
 		trace(getTableNames.rowCount);
-		//trace(getTableNames.fetch_row());
-		//
-		var tNames:String = getTableNames.fetchColumn();
-		trace(tNames);
-		//Sys.exit(0);
-		var tableNames:Array<String> = tNames.split(',');
+
+		var tableNames:Array<String> = getTableNames.fetchColumn().split(',');
+		var getActiveTriggerTables:PDOStatement = S.my.query( comment(unindent, format) /*
+		select string_agg(tbl.relname, ',') as trigger_tables
+FROM pg_trigger trg JOIN pg_class tbl on trg.tgrelid = tbl.oid
+WHERE trg.tgname = 'audit_trigger_row' AND  trg.tgenabled='O'
+GROUP BY(trg.tgname);
+		*/
+		);
+		getActiveTriggerTables.execute();
+		var actTTNames:Array<String> = getActiveTriggerTables.fetchColumn().split(',');
 		for (name in tableNames)
 		{
-			trace(name);
-			createTrigger(name);
+			if (actTTNames.has(name))
+			{
+				trace('HistoryTrigger on Table $name is active');
+				S.add2Response({content:'$name ist aktiv'});
+			}
+			else
+			{
+				trace(name);
+				createTrigger(name);	
+				S.add2Response({content:'$name erstellt'});
+			}
+
 		}
-		data = {
-			tableNames:tableNames
-		};
 		json_encode();
 	}
 	
 	function createTrigger(tableName:String)
-	{
-		var fieldResult:PDOStatement = S.my.query('SELECT GROUP_CONCAT(`COLUMN_NAME`) FROM information_schema.`COLUMNS` WHERE `TABLE_SCHEMA`="crm" AND TABLE_NAME="$tableName" GROUP BY TABLE_NAME');
-		fieldResult.execute();
-		var cNames:String = fieldResult.fetchColumn();
-		var columnNames:Array<String> = cNames.split(',');
-		
-		var columnPairs:Array<String> = new Array();
-		for (cName in columnNames)
-		{
-			columnPairs.push('"$cName",NEW.`$cName`');
-		}
-		trace(columnNames);
-		var dSelect:String = columnPairs.join(',');
-		var activateTrigger = comment(unindent, format) /**
-	blah
-END;
-		**/;		
+	{		
+		var activateTrigger = comment(unindent, format) /*
+		SELECT audit.audit_table('$tableName');
+		*/;		
 		
 		trace(activateTrigger);
-		
-		Sys.exit(1);
+		S.my.exec(activateTrigger);
+		if (S.my.errorCode() != '00000')
+		{
+			trace(S.my.errorInfo());
+			Sys.exit(0);
+		}
 		
 	}
 }

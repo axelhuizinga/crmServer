@@ -1,5 +1,4 @@
 package model;
-import haxe.ds.Either;
 import haxe.ds.StringMap;
 import php.NativeArray;
 /**
