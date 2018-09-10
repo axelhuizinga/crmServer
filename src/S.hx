@@ -17,6 +17,7 @@ import phprbac.Rbac;
 //import model.Campaigns;
 import model.contacts.Contact;
 import model.admin.CreateHistoryTrigger;
+import model.admin.CreateUsers;
 import Model.MData;
 //import model.QC;
 //import model.Select;
@@ -51,7 +52,7 @@ class S
 	public static var my:PDO;
 	public static var host:String;
 	public static var request_scheme:String;
-	public static var user:Int;
+	public static var userName:String;
 	public static var db:String;
 	public static var dbHost:String;
 	public static var dbUser:String;
@@ -70,7 +71,7 @@ class S
 		var now:String = DateTools.format(Date.now(), "%d.%m.%y %H:%M:%S");
 		response = {content:[],error:[]};
 		var params:StringMap<String> = Web.getParams();
-		Web.setHeader("Access-Control-Allow-Origin", "*");
+		
 		trace(Date.now().toString() + ' == $now' );		
 		trace(params);		
 
@@ -84,10 +85,10 @@ class S
 		//my.set_charset("utf8");
 		trace(my);
 		var jwt:String = params.get('jwt');
-		var user:Int = cast params.get('user');
+		var userName:String = params.get('userName');
 		if (jwt.length > 0)
 		{
-			if(User.verify(jwt, user))
+			if(User.verify(jwt, userName))
 				Model.dispatch(params);			
 		}
 		
@@ -115,6 +116,8 @@ class S
 		if (!headerSent)
 		{
 			Web.setHeader('Content-Type', 'application/json');
+			Web.setHeader("Access-Control-Allow-Headers", "access-control-allow-headers, access-control-allow-methods, access-control-allow-origin");
+			Web.setHeader("Access-Control-Allow-Origin", "*");
 			headerSent = true;
 		}			
 		//var exitValue =  
@@ -172,7 +175,7 @@ class S
 		host = Web.getHostName();
 		request_scheme = Syntax.code("$_SERVER['REQUEST_SCHEME']");
 		secret = Syntax.code("$secret");
-		//trace(host);
+		//edump(Syntax.code("$conf"));
 		vicidialUser = Syntax.code("$user");
 		vicidialPass = Syntax.code("$pass");
 	}

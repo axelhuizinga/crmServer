@@ -39,7 +39,7 @@ typedef MData =
 	@:optional var tableNames:Array<String>;
 	@:optional var typeMap:NativeArray;
 	@:optional var userMap:Array<UserInfo>;
-	@:optional var user:Int;
+	@:optional var userName:String;
 };
 
 class Model
@@ -491,7 +491,7 @@ class Model
 	
 	public function json_encode():Void
 	{	
-		data.user = S.user;
+		data.userName = S.userName;
 		data.globals = globals;
 		S.add2Response({data:data});
 	}
