@@ -60,7 +60,7 @@ class Model
 		if (cl == null)
 		{
 			trace('model.' + param.get('className') + ' ???');
-			S.add2Response({error:{classError:' cannot find model.' + cast param.get('className')}}, true);
+			S.add2Response({error:' cannot find model.' + cast param.get('className')}, true);
 			//return false;
 		}
 		var fl:Dynamic = Reflect.field(cl, 'create');
@@ -68,7 +68,7 @@ class Model
 		if (fl == null)
 		{
 			trace(cl + 'create is null');
-			S.add2Response({error:{classError:cast cl + ' create is null'}}, true);
+			S.add2Response({error:cast cl + ' create is null'}, true);
 		}
 		var iFields:Array<String> = Type.getInstanceFields(cl);
 		//trace(iFields);

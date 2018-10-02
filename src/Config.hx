@@ -23,7 +23,7 @@ class Config
 		var vars:Array<String> = js.split('var');
 		vars.shift();
 		var result:StringMap<Dynamic> = new StringMap();
-		trace(vars.length);
+		//trace(vars.length);
 		for (v in vars)
 		{
 			var data:Array<String> = v.split('=');

@@ -5,6 +5,7 @@ import haxe.extern.EitherType;
 import php.Lib;
 import php.NativeArray;
 import me.cunity.php.db.*;
+import php.Syntax;
 import php.db.PDOStatement;
 import sys.db.*;
 import comments.CommentString.*;
@@ -58,16 +59,19 @@ GROUP BY(trg.tgname);
 			if (actTTNames.has(name))
 			{
 				trace('HistoryTrigger on Table $name is active');
-				S.add2Response({content:'$name ist aktiv'});
+				//S.add2Response({content:'$name ist aktiv'});
+				Syntax.code("array_push({0},{1})", data.rows,'$name ist aktiv');
 			}
 			else
 			{
 				trace(name);
 				createTrigger(name);	
-				S.add2Response({content:'$name erstellt'});
+				//S.add2Response({content:'$name erstellt'});
+				Syntax.code("array_push({0},{1})", data.rows,'$name erstellt');
 			}
 
 		}
+		trace(Syntax.code("count({0})", data.rows));
 		json_encode();
 	}
 	

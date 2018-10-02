@@ -2,7 +2,6 @@ package;
 
 import haxe.ds.Either;
 import haxe.ds.StringMap;
-import haxe.Json;
 import me.cunity.debug.Out;
 import php.Syntax;
 import php.db.PDO;
@@ -27,6 +26,8 @@ import me.cunity.php.Debug;
 import php.NativeArray;
 import php.Session;
 import php.Web;
+//import tjson.TJSON;
+import haxe.Json;
 
 using Lambda;
 using Util;
@@ -63,13 +64,15 @@ class S
 	static function main() 
 	{		
 		haxe.Log.trace = Debug._trace;	
-		conf =  Config.load('appData.js');
+
+		//trace(conf.get('ini'));		
+		trace(vicidialUser);
 		//trace(conf);
 		//Session.start();
 
 		//var pd:Dynamic = Web.getPostData();
 		var now:String = DateTools.format(Date.now(), "%d.%m.%y %H:%M:%S");
-		response = {content:[],error:[]};
+		response = {content:'',error:''};
 		var params:StringMap<String> = Web.getParams();
 		
 		trace(Date.now().toString() + ' == $now' );		
@@ -101,9 +104,9 @@ class S
 	public static function add2Response(ob:Response, ex:Bool = false)
 	{
 		if (ob.content != null)
-			response.content.push(ob.content);
+			response.content += ob.content;
 		if (ob.error != null)
-			response.error.push(ob.error);
+			response.error += ob.error;
 		if (ex || ob.data != null)
 		{
 			response.data = ob.data;
@@ -113,6 +116,7 @@ class S
 	
 	public static function exit(r:Dynamic):Void
 	{
+		trace(!headerSent);
 		if (!headerSent)
 		{
 			Web.setHeader('Content-Type', 'application/json');
@@ -121,6 +125,10 @@ class S
 			headerSent = true;
 		}			
 		//var exitValue =  
+		//trace( Syntax.code("json_encode({0})",r.data));
+		//trace(r);
+		//trace( Syntax.code("json_encode({0})",r));
+		//Sys.print(Syntax.code("json_encode({0})",r));
 		Sys.print(Json.stringify(r));
 		Sys.exit(0);		
 	}
@@ -134,6 +142,7 @@ class S
 		}
 		
 		Lib.println(Json.stringify(d));
+		//Lib.println(TJSON.encode(d));
 	}
 	
 	public static function edump(d:Dynamic):Void
@@ -160,11 +169,9 @@ class S
 	}
 	
 	static function __init__() {
-		untyped Syntax.code('require_once({0})', '../.crm/db.php');
-		untyped Syntax.code('require_once({0})', '../.crm/functions.php');
-		untyped Syntax.code('require_once({0})', 'inc/PhpRbac/Rbac.php');
-		//untyped __call__('require_once', '../../crm/loadAstguiclientConf.php');
-		//untyped __call__('require_once', '../agc/functions.fix.php');
+		Syntax.code('require_once({0})', '../.crm/db.php');
+		Syntax.code('require_once({0})', '../.crm/functions.php');
+		Syntax.code('require_once({0})', 'inc/PhpRbac/Rbac.php');
 		Debug.logFile = untyped Syntax.code("$appLog");
 		//edump(Debug.logFile);
 		//Debug.logFile = untyped __var__("GLOBALS","appLog");
@@ -178,6 +185,9 @@ class S
 		//edump(Syntax.code("$conf"));
 		vicidialUser = Syntax.code("$user");
 		vicidialPass = Syntax.code("$pass");
+		conf =  Config.load('appData.js');
+		var ini:NativeArray = Syntax.code("$ini");
+		conf.set('ini', ini);		
 	}
 
 }

@@ -1,6 +1,5 @@
 package model.auth;
 import haxe.crypto.Sha256;
-import haxe.Json;
 import haxe.ds.StringMap;
 import jwt.JWT;
 import php.Exception;
@@ -43,21 +42,21 @@ class User extends Model
 		var pass = params.get('pass');
 
 		var m:Model = new Model();	
-		var res:NativeArray = m.query('SELECT "userName" FROM ${S.db}.users WHERE "userName"=\'$userName\' AND active=1');
+		var res:NativeArray = m.query('SELECT user_name FROM ${S.db}.users WHERE user_name=\'$userName\' AND active=1');
 		trace('SELECT userName FROM ${S.db}.users WHERE userName=$userName AND active=1');
 		if (!cast res)
 		{
-			S.exit({error:{loginError:"Benutzer $userName ist nicht aktiv oder existiert nicht"}});
+			S.exit({error:'userName'});
 			return false;
 		}
 		else{
 			// ACTIVE USER EXISTS
-			var sql = 'SELECT "userName" FROM ${S.db}.users WHERE "userName"=\'$userName\' AND password=\'${Sha256.encode(pass)}\' AND active=1';
+			var sql = 'SELECT user_name FROM ${S.db}.users WHERE user_name=\'$userName\' AND password=crypt(\'$pass\',password) AND active=1';
 			var ares = Lib.toHaxeArray(m.query(sql));
 			trace(ares);
 			if (ares.length == 0 || ares[0] == null)
 			{
-				S.exit({error:{loginError:'Falsches Passwort:$sql'}});
+				S.exit({error:'password'});
 				return false;
 			}
 			//var userData = Lib.hashOfAssociativeArray(res[0]);		
@@ -94,11 +93,11 @@ class User extends Model
 						// JWT VALID AND NOT OLDER THAN 11 h
 						true;
 					default:
-						S.exit({error:{jwtError:'JWT invalid!'}});
+						S.exit({error:'JWT invalid!'});
 						false;
 				}
 			}
-			S.exit({error:{jwtError:'JWT expired!'}});			
+			S.exit({error:'JWT expired!'});			
 			return false;
 		}
 		catch (ex:Dynamic)
