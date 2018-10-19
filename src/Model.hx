@@ -14,8 +14,9 @@ import sys.db.*;
 
 using Lambda;
 using Util;
-/**
- * ...
+//import StringTools;
+
+ /* ...
  * @author axel@cunity.me
  */
 
@@ -345,7 +346,7 @@ class Model
 	
 	public  function query(sql:String, ?resultType):NativeArray
 	{
-		trace(sql.split('password')[0]);
+		//trace(sql.split('password')[0]);
 		if (resultType == null)
 			resultType = PDO.FETCH_ASSOC;
 		//var res:EitherType <MySQLi_Result , Bool > = S.my.real_query(sql, MySQLi.MYSQLI_USE_RESULT);
@@ -357,6 +358,12 @@ class Model
 			Sys.exit(0);
 		}
 		stm.execute(new NativeArray());
+		if (stm.errorCode() != '00000')
+		{
+			trace(stm.errorCode());
+			trace(stm.errorInfo());
+			Sys.exit(0);
+		}
 		trace(stm);
 		var res:NativeArray = stm.fetchAll(resultType);
 		Syntax.foreach(res, function(key:String, value:Dynamic){
@@ -476,6 +483,31 @@ class Model
 		return f;
 		//return KEYWORDS.exists(f.toLowerCase()) ? "`"+f+"`" : f;
 	}	
+	
+	function row2jsonb(row:Dynamic):String
+	{
+		var _jsonb_array_text:StringBuf = new StringBuf();
+		_jsonb_array_text.add('{');
+		for (f in Reflect.fields(row))
+		{
+			trace('$f: ${Reflect.field(row, f)}');
+			var val:Dynamic = Reflect.field(row, f);
+			if (val == null)
+			{
+				trace(null);
+				val = '""';
+			}
+			else if (val == '')
+			{
+				trace("''");
+				val = '""';
+			}
+			var _comma:String = _jsonb_array_text.length > 2?',':'';
+			_jsonb_array_text.add('$_comma$f,$val');
+		}
+		_jsonb_array_text.add('}');
+		return _jsonb_array_text.toString();
+	}
 	
 	public function new(?param:StringMap<String>) {
 		this.param = param;

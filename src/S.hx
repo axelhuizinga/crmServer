@@ -67,6 +67,7 @@ class S
 
 		//trace(conf.get('ini'));		
 		trace(vicidialUser);
+		trace(Syntax.code("$_SERVER['VERIFIED']"));
 		//trace(conf);
 		//Session.start();
 
@@ -121,7 +122,7 @@ class S
 		{
 			Web.setHeader('Content-Type', 'application/json');
 			Web.setHeader("Access-Control-Allow-Headers", "access-control-allow-headers, access-control-allow-methods, access-control-allow-origin");
-			Web.setHeader("Access-Control-Allow-Origin", "*");
+			//Web.setHeader("Access-Control-Allow-Origin", "*");
 			headerSent = true;
 		}			
 		//var exitValue =  
@@ -183,11 +184,12 @@ class S
 		request_scheme = Syntax.code("$_SERVER['REQUEST_SCHEME']");
 		secret = Syntax.code("$secret");
 		//edump(Syntax.code("$conf"));
-		vicidialUser = Syntax.code("$user");
-		vicidialPass = Syntax.code("$pass");
+
 		conf =  Config.load('appData.js');
 		var ini:NativeArray = Syntax.code("$ini");
 		conf.set('ini', ini);		
+		vicidialUser = Syntax.code("$user");
+		vicidialPass = Syntax.code("$pass");		
 	}
 
 }

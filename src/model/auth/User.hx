@@ -42,8 +42,8 @@ class User extends Model
 		var pass = params.get('pass');
 
 		var m:Model = new Model();	
-		var res:NativeArray = m.query('SELECT user_name FROM ${S.db}.users WHERE user_name=\'$userName\' AND active=1');
-		trace('SELECT userName FROM ${S.db}.users WHERE userName=$userName AND active=1');
+		var res:NativeArray = m.query('SELECT user_name FROM ${S.db}.users WHERE user_name=\'$userName\' AND active=TRUE');
+		trace('SELECT userName FROM ${S.db}.users WHERE userName=$userName AND active=TRUE');
 		if (!cast res)
 		{
 			S.exit({error:'userName'});
@@ -51,7 +51,7 @@ class User extends Model
 		}
 		else{
 			// ACTIVE USER EXISTS
-			var sql = 'SELECT user_name FROM ${S.db}.users WHERE user_name=\'$userName\' AND password=crypt(\'$pass\',password) AND active=1';
+			var sql = 'SELECT user_name FROM ${S.db}.users WHERE user_name=\'$userName\' AND password=crypt(\'$pass\',password) AND active=TRUE';
 			var ares = Lib.toHaxeArray(m.query(sql));
 			trace(ares);
 			if (ares.length == 0 || ares[0] == null)
