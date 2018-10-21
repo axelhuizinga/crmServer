@@ -43,16 +43,41 @@ typedef MData =
 	@:optional var userName:String;
 };
 
+@:enum
+abstract JoinType(String)
+{
+	var INNER = 'INNER';	
+	var LEFT = 'LEFT';	
+	var RIGHT = 'RIGHT';	
+}
+
+typedef DataRelation =
+{
+	var joinType:JoinType;
+	var joinCondition:String;	
+}
+
+typedef DataSource =
+{
+	@:optional var alias:String;
+	@:optional var fields:Array<String>;
+//	@:optional var alias:String;
+	@:optional var filter:Array<StringMap<String>>;
+}
+
 class Model
 {
 	public var data:MData;
 	public var db:String;
+	public var filter:StringBuf;
+	var filterValues:Array<Array<Dynamic>>;
 	public var globals:Dynamic;
 	public var table:String;
 	public var primary:String;
 	public var num_rows(default, null):Int;
-	var joinTable:String;
-	var param:StringMap<Dynamic>;
+	var dataSource:StringMap<DataSource>;// EACH KEY IS A TABLE NAME
+	var dataSourceSql:String;
+	var param:StringMap<String>;
 	
 	public static function dispatch(param:StringMap<Dynamic>):Void
 	{
@@ -85,81 +110,69 @@ class Model
 		}
 	}
 	
-	public function count(q:StringMap<String>, sqlBf:StringBuf, phValues:Array<Array<Dynamic>>):Int
+	public function count(q:StringMap<String>):Int
 	{
-		var fields:String = q.get('fields');		
-		trace ('table:' + q.get('table') + ':' + (q.get('table').any2bool() ? q.get('table') : table));
+		var fields:String = param.get('fields');	
+		var sqlBf:StringBuf = new StringBuf();
+		trace ('table:' + param.get('table') + ':' + (param.get('table').any2bool() ? param.get('table') : table));
 		//sqlBf.add('SELECT ' + fieldFormat((fields != null ? fields.split(',').map(function(f:String) return quoteField(f)).join(',') : '*' )));
 		sqlBf.add('SELECT COUNT(*) AS count');
-		var qTable:String = (q.get('table').any2bool() ? q.get('table') : table);
-		var joinCond:String = (q.get('joincond').any2bool() ? q.get('joincond') : null);
-		var joinTable:String = (q.get('jointable').any2bool() ? q.get('jointable') : null);
-
-		sqlBf.add(' FROM ' + S.my.quote(qTable));		
-		var where:String = q.get('where');
+		var qTable:String = (param.get('table').any2bool() ? param.get('table') : table);
+		sqlBf.add(' FROM ' + S.my.quote(qTable));	
+		if (param.get('joinConditions').any2bool())
+		{
+			buildJoin(sqlBf);
+		}		
+		var where:String = param.get('where');
 		if (where != null)
-			buildCond(where, sqlBf, phValues);
+			buildCond(where);
 
-		return Lib.hashOfAssociativeArray(execute(sqlBf.toString(), phValues)[0]).get('count');
-		//return Lib.hashOfAssociativeArray(execute(sqlBf.toString(), q, phValues)[0]).get('count');
+		return Lib.hashOfAssociativeArray(execute(sqlBf.toString())[0]).get('count');
+		//return Lib.hashOfAssociativeArray(execute(sqlBf.toString(), q,filterValuess)[0]).get('count');
 	}
 	
-	public function countJoin(q:StringMap<String>, sqlBf:StringBuf, phValues:Array<Array<Dynamic>>):Int
+	public function buildJoin(sqlBf:StringBuf):Int
 	{
-		var fields:String = q.get('fields');		
+		//dataSourceSql
+		//for
+		/*var fields:String = param.get('fields');		
 		
-		trace ('table:' + q.get('table') + ':' +  (q.get('table').any2bool() ? q.get('table') : table));
+		trace ('table:' + param.get('table') + ':' +  (param.get('table').any2bool() ? param.get('table') : table));
 		//sqlBf.add('SELECT ' + fieldFormat((fields != null ? fields.split(',').map(function(f:String) return quoteField(f)).join(',') : '*' )));
 		sqlBf.add('SELECT COUNT(*) AS count');
-		var qTable:String = (q.get('table').any2bool() ? q.get('table') : table);
-		var joinCond:String = (q.get('joincond').any2bool() ? q.get('joincond') : null);
-		joinTable = (q.get('jointable').any2bool() ? q.get('jointable') : null);
+		var qTable:String = (param.get('table').any2bool() ? param.get('table') : table);
+		var joinCond:String = (param.get('joincond').any2bool() ? param.get('joincond') : null);
+		var dataSource:Array<String> = Reflect.fields(param.get('dataSources'));
 		
-		var filterTables:String = '';
-		if (q.get('filter').any2bool() )
-		{
-			filterTables = q.get('filter_tables').split(',').map(function(f:String) return 'fly_crm.' + S.my.quote(f)).join(',');			
-			sqlBf.add(' FROM $filterTables,' + S.my.quote(qTable));
-		}
-		else
-			sqlBf.add(' FROM ' + S.my.quote(qTable));		
+
+		sqlBf.add(' FROM ' + S.my.quote(qTable));		
 		
 		if (joinTable != null)
 			sqlBf.add(' INNER JOIN $joinTable');
 		if (joinCond != null)
 			sqlBf.add(' ON $joinCond');
-		var where:String = q.get('where');
+		var where:String = param.get('where');
 		if (where != null)
-			buildCond(where, sqlBf, phValues);
-		// add filter conditions
-		if (q.get('filter').any2bool())
-		{			
-			buildCond(q.get('filter').split(',').map( function(f:String) return 'fly_crm.' + S.my.quote(f) 
-			).join(','), sqlBf, phValues, false);
-			if (joinTable == 'vicidial_users')
-				sqlBf.add(' ' + filterTables.split(',').map(function(f:String) return 'AND $f.client_id=vicidial_list.vendor_lead_code').join(' '));
-			else
-				sqlBf.add(' ' + filterTables.split(',').map(function(f:String) return 'AND $f.client_id=clients.client_id').join(' '));
-		}
-		//var hash =  Lib.hashOfAssociativeArray(execute(sqlBf.toString(), q, phValues)[0]);
+			buildCond(where, sqlBf,filterValues);
+		//var hash =  Lib.hashOfAssociativeArray(execute(sqlBf.toString(), q,filterValuess)[0]);
 		//trace(hash + ': ' + (hash.exists('count') ? 'Y':'N') );
-		return Lib.hashOfAssociativeArray(execute(sqlBf.toString(), phValues)[0]).get('count');
-		//return Lib.hashOfAssociativeArray(execute(sqlBf.toString(), q, phValues)[0]).get('count');
+		return Lib.hashOfAssociativeArray(execute(sqlBf.toString(),filterValues)[0]).get('count');*/
+		return 0;
 	}
 	
-	public function doJoin(q:StringMap<String>, sqlBf:StringBuf, phValues:Array<Array<Dynamic>>):NativeArray
+	public function doJoin(q:StringMap<String>, sqlBf:StringBuf,filterValuess:Array<Array<Dynamic>>):NativeArray
 	{
-		var fields:String = q.get('fields');		
-		trace ('table:' + q.get('table') + ':' + (q.get('table').any2bool() ? q.get('table') : table));
+		var fields:String = param.get('fields');		
+		trace ('table:' + param.get('table') + ':' + (param.get('table').any2bool() ? param.get('table') : table));
 		//sqlBf.add('SELECT ' + fieldFormat((fields != null ? fields.split(',').map(function(f:String) return quoteField(f)).join(',') : '*' )));
 		sqlBf.add('SELECT ' + (fields != null ? fieldFormat( fields.split(',').map(function(f:String) return S.my.quote(f)).join(',') ): '*' ));
-		var qTable:String = (q.get('table').any2bool() ? q.get('table') : table);
-		var joinCond:String = (q.get('joincond').any2bool() ? q.get('joincond') : null);
-		var joinTable:String = (q.get('jointable').any2bool() ? q.get('jointable') : null);
+		var qTable:String = (param.get('table').any2bool() ? param.get('table') : table);
+		var joinCond:String = (param.get('joincond').any2bool() ? param.get('joincond') : null);
+		var joinTable:String = (param.get('jointable').any2bool() ? param.get('jointable') : null);
 		var filterTables:String = '';
-		if (q.get('filter').any2bool() )
+		if (param.get('filter').any2bool() )
 		{
-			filterTables = q.get('filter_tables').split(',').map(function(f:String) return 'fly_crm.' + S.my.quote(f)).join(',');			
+			filterTables = param.get('filter_tables').split(',').map(function(f:String) return 'fly_crm.' + S.my.quote(f)).join(',');			
 			sqlBf.add(' FROM $filterTables,' + S.my.quote(qTable));
 		}
 		else
@@ -169,14 +182,14 @@ class Model
 			sqlBf.add(' INNER JOIN $joinTable');
 		if (joinCond != null)
 			sqlBf.add(' ON $joinCond');
-		var where:String = q.get('where');
+		var where:String = param.get('where');
 		if (where != null)
-			buildCond(where, sqlBf, phValues);
+			buildCond(where);
 			
-		if (q.get('filter').any2bool())
+		if (param.get('filter').any2bool())
 		{			
-			buildCond(q.get('filter').split(',').map( function(f:String) return 'fly_crm.' + S.my.quote(f) 
-			).join(','), sqlBf, phValues, false);
+			buildCond(param.get('filter').split(',').map( function(f:String) return 'fly_crm.' + S.my.quote(f) 
+			).join(','), false);
 						
 			if (joinTable == 'vicidial_users')
 				sqlBf.add(' ' + filterTables.split(',').map(function(f:String) return 'AND $f.client_id=vicidial_list.vendor_lead_code').join(' '));
@@ -184,44 +197,46 @@ class Model
 				sqlBf.add(' ' + filterTables.split(',').map(function(f:String) return 'AND $f.client_id=clients.client_id').join(' '));
 		}		
 		
-		var groupParam:String = q.get('group');
+		var groupParam:String = param.get('group');
 		if (groupParam != null)
 			buildGroup(groupParam, sqlBf);
 		//TODO:HAVING
-		var order:String = q.get('order');
+		var order:String = param.get('order');
 		if (order != null)
 			buildOrder(order, sqlBf);
 			
-		var limit:String = q.get('limit');
-		buildLimit((limit == null?'15':limit), sqlBf);	//	TODO: CONFIG LIMIT DEFAULT
-		return execute(sqlBf.toString(), phValues);
-		//return execute(sqlBf.toString(), q, phValues);
+		var limit:String = param.get('limit');
+		buildLimit((limit == null?'25':limit), sqlBf);	//	TODO: CONFIG LIMIT DEFAULT
+		return execute(sqlBf.toString());
+		//return execute(sqlBf.toString(), q,filterValuess);
 	}
 	
-	public function doSelect(q:StringMap<Dynamic>, sqlBf:StringBuf, phValues:Array<Array<Dynamic>>):NativeArray
+	public function doSelect(q:StringMap<Dynamic>):NativeArray
 	{
-		var fields:String = q.get('fields');		
-		trace ('table:' + q.get('table') + ':' + (q.get('table').any2bool() ? q.get('table') : table));
+		var fields:String = param.get('fields');	
+		var sqlBf:StringBuf = new StringBuf();
+		trace ('table:' + param.get('table') + ':' + (param.get('table').any2bool() ? param.get('table') : table));
 		//sqlBf.add('SELECT ' + fieldFormat((fields != null ? fields.split(',').map(function(f:String) return quoteField(f)).join(',') : '*' )));
 		//sqlBf.add('SELECT ' + (fields != null ? fieldFormat( fields.split(',').map(function(f:String) return S.my.quote(f)).join(',') ): '*' ));
-		sqlBf.add('SELECT ' + (fields != null ? fieldFormat(fields): '*' ));
-		var qTable:String = (q.get('table').any2bool() ? q.get('table') : table);
+		//sqlBf.add('SELECT ' + (fields != null ? fieldFormat(fields): '*' ));
+		sqlBf.add('SELECT ' + (fields != null ? fields: '*' ));
+		var qTable:String = (param.get('table').any2bool() ? param.get('table') : table);
 		//TODO: JOINS
 		sqlBf.add(' FROM ' + S.my.quote(qTable));		
-		var where:String = q.get('where');
+		var where:String = param.get('where');
 		if (where != null)
-			buildCond(where, sqlBf, phValues);
-		var groupParam:String = q.get('group');
+			buildCond(where);
+		var groupParam:String = param.get('group');
 		if (groupParam != null)
 			buildGroup(groupParam, sqlBf);
 		//TODO:HAVING
-		var order:String = q.get('order');
+		var order:String = param.get('order');
 		if (order != null)
 			buildOrder(order, sqlBf);
-		var limit:String = q.get('limit');
-		buildLimit((limit == null?'15':limit), sqlBf);	//	TODO: CONFIG LIMIT DEFAULT
-		return execute(sqlBf.toString(), phValues);
-		//return execute(sqlBf.toString(), q, phValues);
+		var limit:String = param.get('limit');
+		buildLimit((limit == null?'25':limit), sqlBf);	//	TODO: CONFIG LIMIT DEFAULT
+		return execute(sqlBf.toString());
+		//return execute(sqlBf.toString(), q,filterValuess);
 	}
 	
 	public function fieldFormat(fields:String):String
@@ -258,24 +273,22 @@ class Model
 	
 	public function find(param:StringMap<String>):Void
 	{	
-		var sqlBf:StringBuf = new StringBuf();
-		var phValues:Array<Array<Dynamic>> = new Array();
-		//trace(param);
-		var count:Int = countJoin(param, sqlBf, phValues);
 		
-		sqlBf = new StringBuf();
-		phValues = new Array();
+		var filterValues:Array<Array<Dynamic>> = new Array();
+		//trace(param);
+		var count:Int = count(param);
+		
 		trace( 'count:' + count + ' page:' + param.get('page')  + ': ' + (param.exists('page') ? 'Y':'N'));
 		data =  {
 			count:count,
 			page: param.exists('page') ? Std.parseInt( param.get('page') ) : 1,
-			rows: doSelect(param, sqlBf, phValues)
+			rows: doSelect(param)
 		};
-		 json_encode();
+		json_encode();
 	}
 	
-	//public function execute(sql:String, param:StringMap<Dynamic>, ?phValues:Array<Array<Dynamic>>):NativeArray
-	public function execute(sql:String, ?phValues:Array<Array<Dynamic>>):NativeArray
+	//public function execute(sql:String, param:StringMap<Dynamic>, filterValuess:Array<Array<Dynamic>>):NativeArray
+	public function execute(sql:String):NativeArray
 	{
 		trace(sql);	
 		var stmt:PDOStatement =  S.my.prepare(sql, null);
@@ -295,12 +308,12 @@ class Model
 		var qObj:Dynamic = { };
 		//var qVars:String = 'qVar_';
 		var i:Int = 0;
-		for (ph in phValues)
+		for (fV in filterValues)
 		{
-			var type:Int = PDO.PARAM_STR; //dbFieldTypes.get(ph[0]);
+			var type:Int = PDO.PARAM_STR; //dbFieldTypes.get(fV[0]);
 			//bindTypes += (type.any2bool()  ?  type : 's');
-			values2bind[i++] = ph[1];
-			if (!stmt.bindParam(i, ph[1], type))
+			values2bind[i++] = fV[1];
+			if (!stmt.bindParam(i, fV[1], type))//TODO: CHECK POSTGRES DRIVER OPTIONS
 			{
 				trace('ooops:' + stmt.errorInfo());
 				Sys.exit(0);
@@ -309,9 +322,8 @@ class Model
 		
 		var data:NativeArray = null;
 		var success: Bool;
-		if (phValues.length > 0)
+		if(filterValues.length > 0)
 		{			
-			//var fieldNames:Array<String> =  param.get('fields').split(',');
 			success = stmt.execute(values2bind);
 			if (!success)
 			{
@@ -373,17 +385,20 @@ class Model
 		return res;
 	}
 	
-	public function buildCond(whereParam:String, sob:StringBuf, phValues:Array<Array<Dynamic>>, ?first:Bool=true):Bool
+	public function buildCond(whereParam:String, ?first:Bool=true):Bool
 	{
-		var sqlBf:StringBuf = new StringBuf();
 		var where:Array<Dynamic> = whereParam.split(',');
+		if (first)//first condition in this query
+		{
+			filter = new StringBuf();
+			filterValues = new Array();	
+		}
 		//trace(where);
 		if (where.length == 0)
 			return false;
-		//var first:Bool = true;
+
 		for (w in where)
-		{
-			
+		{			
 			var wData:Array<String> = w.split('|');
 			var values:Array<String> = wData.slice(2);
 			
@@ -394,12 +409,12 @@ class Model
 				filter_tables = jt.split(',');
 			}
 			
-			trace(wData + ':' + joinTable + ':' +  filter_tables);
+			trace(wData + ':' + ':' +  filter_tables);
 			
 			if (first)
-				sqlBf.add(' WHERE ' );
+				filter.add(' WHERE ' );
 			else
-				sqlBf.add(' AND ');
+				filter.add(' AND ');
 			first = false;			
 			
 			switch(wData[1].toUpperCase())
@@ -407,43 +422,43 @@ class Model
 				case 'BETWEEN':
 					if (!(values.length == 2) && values.foreach(function(s:String) return s.any2bool()))
 						S.exit( {error:'BETWEEN needs 2 values - got only:' + values.join(',')});
-					sqlBf.add(quoteField(wData[0]));
-					sqlBf.add(' BETWEEN ? AND ?');
-					phValues.push([wData[0], values[0]]);
-					phValues.push([wData[0], values[1]]);
+					filter.add(quoteField(wData[0]));
+					filter.add(' BETWEEN ? AND ?');
+					filterValues.push([wData[0], values[0]]);
+					filterValues.push([wData[0], values[1]]);
 				case 'IN':					
-					sqlBf.add(quoteField(wData[0]));					
-					sqlBf.add(' IN(');
-					sqlBf.add( values.map(function(s:String) { 
-						phValues.push([wData[0], values.shift()]);
+					filter.add(quoteField(wData[0]));					
+					filter.add(' IN(');
+					filter.add( values.map(function(s:String) { 
+						filterValues.push([wData[0], values.shift()]);
 						return '?'; 
 						} ).join(','));							
-					sqlBf.add(')');
+					filter.add(')');
 				case 'LIKE':					
-					sqlBf.add(quoteField(wData[0]));
-					sqlBf.add(' LIKE ?');
-					phValues.push([wData[0], wData[2]]);
+					filter.add(quoteField(wData[0]));
+					filter.add(' LIKE ?');
+					filterValues.push([wData[0], wData[2]]);
 				case _:
-					sqlBf.add(quoteField(wData[0]));
+					filter.add(quoteField(wData[0]));
 					if (~/^(<|>)/.match(wData[1]))
 					{
 						var eR:EReg = ~/^(<|>)/;
 						eR.match(wData[1]);
 						var val = Std.parseFloat(eR.matchedRight());
-						sqlBf.add(eR.matched(0) + '?');
-						phValues.push([wData[0],val]);
+						filter.add(eR.matched(0) + '?');
+						filterValues.push([wData[0],val]);
 						continue;
 					}
 					//PLAIN VALUE
 					if( wData[1] == 'NULL' )
-						sqlBf.add(" IS NULL");
+						filter.add(" IS NULL");
 					else {
-						sqlBf.add(" = ?");
-						phValues.push([wData[0],wData[1]]);	
+						filter.add(" = ?");
+						filterValues.push([wData[0],wData[1]]);	
 					}			
 			}			
 		}
-		sob.add(sqlBf.toString());
+		//sob.add(sqlBf.toString());
 		return true;
 	}
 
@@ -487,7 +502,6 @@ class Model
 	function row2jsonb(row:Dynamic):String
 	{
 		var _jsonb_array_text:StringBuf = new StringBuf();
-		_jsonb_array_text.add('{');
 		for (f in Reflect.fields(row))
 		{
 			trace('$f: ${Reflect.field(row, f)}');
@@ -505,7 +519,6 @@ class Model
 			var _comma:String = _jsonb_array_text.length > 2?',':'';
 			_jsonb_array_text.add('$_comma$f,$val');
 		}
-		_jsonb_array_text.add('}');
 		return _jsonb_array_text.toString();
 	}
 	
@@ -513,11 +526,11 @@ class Model
 		this.param = param;
 		data = {};
 		data.rows = new NativeArray();
-		if (param != null && param.get('firstLoad') == 'true')
+		if (param != null && param.get('fullReload') == 'true')
 		{
-			trace('firstLoad');
+			trace('fullReload');
 			globals = { };
-			globals.users = query("SELECT full_name, user, active, user_group FROM vicidial_users");
+			globals.users = query("SELECT first_name, last_name, user_name, active, user_group FROM vicidial_users");
 		}
 	}
 	
@@ -536,7 +549,7 @@ class Model
 	function getEditorFields(?table_name:String):StringMap<Array<StringMap<String>>>
 	{
 		var sqlBf:StringBuf = new StringBuf();
-		var phValues:Array<Array<Dynamic>> = new Array();
+		var filterValues:Array<Array<Dynamic>> = new Array();
 		var param:StringMap<String> = new StringMap();
 		param.set('table', 'fly_crm.editor_fields');
 		
@@ -546,9 +559,9 @@ class Model
 		param.set('order', 'table_name,field_rank,field_order');
 		param.set('limit', '100');
 		//trace(param);
-		var eFields:Array<Dynamic> = Lib.toHaxeArray( doSelect(param, sqlBf, phValues));
-		//var eFields:NativeArray = doSelect(param, sqlBf, phValues);
-		//var eFields:Dynamic = doSelect(param, sqlBf, phValues);
+		var eFields:Array<Dynamic> = Lib.toHaxeArray( doSelect(param));
+		//var eFields:NativeArray = doSelect(param, sqlBffilterValueses);
+		//var eFields:Dynamic = doSelect(param, sqlBffilterValueses);
 		//trace(eFields);
 		//trace(eFields.length);
 		var ret:StringMap<Array<StringMap<String>>> = new StringMap();

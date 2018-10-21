@@ -34,7 +34,7 @@ class VicidialUsers extends Model
 		param.set('where', (user == null?'user_group|LIKE|AGENT%,active|Y':'user|$user'));
 		//param.set('where', (user == null?'user_group|AGENTS_A':'user|$user'));
 		param.set('limit', '50');
-		var userMap:NativeArray = doSelect(param, sqlBf, phValues);		
+		var userMap:NativeArray = doSelect(param);		
 		trace(param);
 		//trace(userMap);
 		//trace(num_rows);

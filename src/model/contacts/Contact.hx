@@ -64,12 +64,12 @@ typedef CustomField =
 			sqlBf.add(' ON $joinCond');
 		var where:String = q.get('where');
 		if (where != null)
-			buildCond(where, sqlBf, phValues);
+			buildCond(where);
 
 		if (q.get('filter').any2bool())
 		{			
 			buildCond(q.get('filter').split(',').map( function(f:String) return 'fly_crm.' + S.my.quote(f) 
-			).join(','), sqlBf, phValues, false);
+			).join(','), false);
 			
 			if (joinTable == 'vicidial_users')
 				sqlBf.add(' ' + filterTables.split(',').map(function(f:String) return 'AND $f.client_id=vicidial_list.vendor_lead_code').join(' '));
@@ -87,7 +87,7 @@ typedef CustomField =
 			buildOrder(order, sqlBf);
 		var limit:String = q.get('limit');
 		buildLimit((limit == null?'15':limit), sqlBf);	//	TODO: CONFIG LIMIT DEFAULT
-		return execute(sqlBf.toString(), phValues);
+		return execute(sqlBf.toString());
 		//return execute(sqlBf.toString(), q, phValues);
 	}
 	
@@ -105,7 +105,7 @@ typedef CustomField =
 		var sqlBf:StringBuf = new StringBuf();
 		var phValues:Array<Array<Dynamic>> = new Array();
 		trace(param);
-		var count:Int = countJoin(param, sqlBf, phValues);
+		var count:Int = count(param);
 		
 		sqlBf = new StringBuf();
 		phValues = new Array();
