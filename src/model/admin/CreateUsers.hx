@@ -28,7 +28,7 @@ class CreateUsers extends Model
 	public static function create(param:StringMap<String>):Void
 	{
 		var self:CreateUsers = new CreateUsers(param);	
-		self.table = 'columns';
+		//self.table = 'columns';
 		Reflect.callMethod(self, Reflect.field(self,param.get('action')), [param]);
 	}	
 	

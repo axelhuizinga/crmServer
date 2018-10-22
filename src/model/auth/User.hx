@@ -17,9 +17,6 @@ class User extends Model
 	public static function create(param:StringMap<String>):Void
 	{
 		var self:User = new User(param);	
-		//self.table = 'columns';
-		self.param = param;
-		//trace(param);
 		Reflect.callMethod(self, Reflect.field(self, param.get('action')), [param]);
 	}
 	
@@ -41,7 +38,7 @@ class User extends Model
 		var userName:String = params.get('userName');
 		var pass = params.get('pass');
 
-		var m:Model = new Model();	
+		var m:Model = new Model(params);	
 		var res:NativeArray = m.query('SELECT user_name FROM ${S.db}.users WHERE user_name=\'$userName\' AND active=TRUE');
 		trace('SELECT userName FROM ${S.db}.users WHERE userName=$userName AND active=TRUE');
 		if (!cast res)

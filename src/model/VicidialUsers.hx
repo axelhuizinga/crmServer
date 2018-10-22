@@ -31,10 +31,10 @@ class VicidialUsers extends Model
 		var param:StringMap<String> = new StringMap();
 		param.set('table', 'asterisk.vicidial_users');
 		param.set('fields', 'user,user_level, pass,full_name');
-		param.set('where', (user == null?'user_group|LIKE|AGENT%,active|Y':'user|$user'));
-		//param.set('where', (user == null?'user_group|AGENTS_A':'user|$user'));
+		param.set('filter', (user == null?'user_group|LIKE|AGENT%,active|Y':'user|$user'));
+		//param.set('filter', (user == null?'user_group|AGENTS_A':'user|$user'));
 		param.set('limit', '50');
-		var userMap:NativeArray = doSelect(param);		
+		var userMap:NativeArray = doSelect();		
 		trace(param);
 		//trace(userMap);
 		//trace(num_rows);

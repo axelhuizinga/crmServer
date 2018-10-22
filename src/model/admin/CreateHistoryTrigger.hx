@@ -23,7 +23,7 @@ class CreateHistoryTrigger extends Model
 	public static function create(param:StringMap<String>):Void
 	{
 		var self:CreateHistoryTrigger = new CreateHistoryTrigger(param);	
-		self.table = 'columns';
+		//self.table = 'columns';
 		Reflect.callMethod(self, Reflect.field(self,param.get('action')), [param]);
 	}
 

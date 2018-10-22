@@ -38,7 +38,7 @@ typedef CustomField =
 		'geburts_datum'=>'birth_date',
 	];
 	
-	override public function doJoin(q:StringMap<String>, sqlBf:StringBuf, phValues:Array<Array<Dynamic>>):NativeArray
+	/*override public function doJoin(q:StringMap<String>, sqlBf:StringBuf, phValues:Array<Array<Dynamic>>):NativeArray
 	{
 		var fields:String = q.get('fields');	
 		//trace(fields);
@@ -62,9 +62,9 @@ typedef CustomField =
 			sqlBf.add(' INNER JOIN $joinTable');
 		if (joinCond != null)
 			sqlBf.add(' ON $joinCond');
-		var where:String = q.get('where');
-		if (where != null)
-			buildCond(where);
+		var filter:String = q.get('filter');
+		if (filter != null)
+			buildCond(filter);
 
 		if (q.get('filter').any2bool())
 		{			
@@ -89,18 +89,18 @@ typedef CustomField =
 		buildLimit((limit == null?'15':limit), sqlBf);	//	TODO: CONFIG LIMIT DEFAULT
 		return execute(sqlBf.toString());
 		//return execute(sqlBf.toString(), q, phValues);
-	}
+	}*/
 	
 	public static function create(param:StringMap<String>):Void
 	{
 		var self:Contact = new Contact(param);	
-		self.table = 'vicidial_list';
+		//self.table = 'vicidial_list';
 		//self.param = param;
 		//trace(param);
 		Reflect.callMethod(self, Reflect.field(self,param.get('action')), [param]);
 	}
 	
-	override public function find(param:StringMap<String>):Void
+/*	override public function find(param:StringMap<String>):Void
 	{	
 		var sqlBf:StringBuf = new StringBuf();
 		var phValues:Array<Array<Dynamic>> = new Array();
@@ -116,7 +116,7 @@ typedef CustomField =
 			rows: doJoin(param, sqlBf, phValues)
 		};
 		json_encode();
-	}	
+	}	*/
 	
 	public function edit(param:StringMap<Dynamic>):Void
 	{

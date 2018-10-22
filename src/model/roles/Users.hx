@@ -11,16 +11,13 @@ class Users extends Model
 	public static function create(param:StringMap<String>):Void
 	{
 		var self:Users = new Users(param);	
-		self.table = 'users';
-		self.param = param;
-		//trace(param);
 		Reflect.callMethod(self, Reflect.field(self, param.get('action')), [param]);
 	}
 
 	public function list() 
 	{
 		trace(param);
-		find(param);
+		find();
 	}
 	
 }
