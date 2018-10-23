@@ -75,7 +75,7 @@ class Model
 	public var filterSql:String;
 	var filterValues:Array<Array<Dynamic>>;
 	public var globals:Dynamic;
-	public var tables:Array<String>;
+	public var tableNames:Array<String>;
 	public var primary:String;
 	public var num_rows(default, null):Int;
 	var dataSource:StringMap<StringMap<String>>;// EACH KEY IS A TABLE NAME
@@ -118,13 +118,17 @@ class Model
 		var sqlBf:StringBuf = new StringBuf();
 		sqlBf.add('SELECT COUNT(*) AS count FROM ');
 
-		if (tables.length>1)
+		if (tableNames.length>1)
 		{
 			sqlBf.add(buildJoin());
 		}		
 		else
 		{
-			sqlBf.add(quoteIdent(tables[0]) + ' ');
+			sqlBf.add('$tableNames[0] ');
+		}
+		if (filterSql != null)
+		{
+			sqlBf.add(filterSql);
 		}
 	
 		return Lib.hashOfAssociativeArray(execute(sqlBf.toString())[0]).get('count');
@@ -135,11 +139,11 @@ class Model
 		if (joinSql != null)
 			return joinSql;
 		var sqlBf:StringBuf = new StringBuf();				
-		for (table in tables)
+		for (table in tableNames)
 		{
 			var tRel:StringMap<String> = dataSource.get(table);
-			var alias:String = tRel.get('alias');
-			var jCond:String = tRel.get('jCond');
+			var alias:String = quoteIdent(tRel.get('alias'));
+			var jCond:String = tRel.exists('jCond') ? quoteIdent(tRel.get('jCond')):null;
 			if (jCond != null)
 			{
 				var jType:String = switch(tRel.get('jType'))
@@ -151,11 +155,11 @@ class Model
 					default:
 						'INNER';
 				}
-				sqlBf.add('$jType JOIN ${quoteIdent(table)} $alias ON $jCond ');		
+				sqlBf.add('$jType JOIN $table $alias ON $jCond ');		
 			}
 			else
 			{// FIRST TABLE
-				sqlBf.add('${quoteIdent(table)} $alias ');
+				sqlBf.add('$table $alias ');
 			}
 		}
 		joinSql = sqlBf.toString();
@@ -167,14 +171,18 @@ class Model
 		var sqlBf:StringBuf = new StringBuf();
 
 		sqlBf.add('SELECT $queryFields FROM ');
-		if (tables.length>1)
+		if (tableNames.length>1)
 		{
 			sqlBf.add(buildJoin());
 		}		
 		else
 		{
-			sqlBf.add(quoteIdent(tables[0]) + ' ');
+			sqlBf.add('$tableNames[0] ');
 		}
+		if (filterSql != null)
+		{
+			sqlBf.add(filterSql);
+		}		
 		var groupParam:String = param.get('group');
 		if (groupParam != null)
 			buildGroup(groupParam, sqlBf);
@@ -230,16 +238,11 @@ class Model
 		json_encode();
 	}
 	
-	//public function execute(sql:String, param:StringMap<Dynamic>, filterValuess:Array<Array<Dynamic>>):NativeArray
 	public function execute(sql:String):NativeArray
 	{
 		trace(sql);	
 		var stmt:PDOStatement =  S.my.prepare(sql);
-		//var success:Bool = stmt.prepare(sql);
-		//var success:EitherType<MySQLi_STMT ,Bool> = stmt.prepare(sql);
-		var error:String = S.my.errorCode();
-		trace (error);
-		if (error=='')
+		if (S.my.errorCode()!='00000')
 		{
 			trace(stmt.errorInfo());
 			return null;
@@ -247,11 +250,7 @@ class Model
 		var bindTypes:String = '';
 		var values2bind:NativeArray = null;
 		//var dbFieldTypes:StringMap<String> =  Lib.hashOfAssociativeArray(Lib.associativeArrayOfObject(S.conf.get('dbFieldTypes')));
-		
-		var qObj:Dynamic = { };
-		//var qVars:String = 'qVar_';
-
-		
+		//trace(filterValues);
 		var data:NativeArray = null;
 		var success: Bool;
 		if(filterValues.length > 0)
@@ -260,7 +259,6 @@ class Model
 			for (fV in filterValues)
 			{
 				var type:Int = PDO.PARAM_STR; //dbFieldTypes.get(fV[0]);
-				//bindTypes += (type.any2bool()  ?  type : 's');
 				values2bind[i++] = fV[1];
 				//if (!stmt.bindParam(i, fV[1], type))//TODO: CHECK POSTGRES DRIVER OPTIONS
 				if (!stmt.bindValue(i, fV[1], type))//TODO: CHECK POSTGRES DRIVER OPTIONS
@@ -298,16 +296,12 @@ class Model
 			return(data);	
 		}
 		return Syntax.assocDecl({'ERROR': stmt.errorInfo()});
-		//return untyped __call__("array", 'ERROR', stmt.error);
 	}
 	
 	public  function query(sql:String, ?resultType):NativeArray
 	{
-		//trace(sql.split('password')[0]);
 		if (resultType == null)
 			resultType = PDO.FETCH_ASSOC;
-		//var res:EitherType <MySQLi_Result , Bool > = S.my.real_query(sql, MySQLi.MYSQLI_USE_RESULT);
-		//new NativeArray();
 		var stm:PDOStatement = S.my.query(sql);
 		if (! untyped stm)
 		{
@@ -433,7 +427,7 @@ class Model
 	
 	function quoteIdent(f : String):String 
 	{
-		if ( ~/^(a-zA-Z_)a-zA-Z0-9_+$/.match(f))
+		if ( ~/^([a-zA-Z_])[a-zA-Z0-9_\.=\/]+$/.match(f))
 		{
 			return f;
 		}
@@ -481,16 +475,18 @@ class Model
 			globals = { };
 			globals.users = query("SELECT first_name, last_name, user_name, active, user_group FROM vicidial_users");
 		}
-		tables = [];
+		tableNames = [];
 		var fields:Array<String> = [];
 		if(param.get('dataSource') != null)
 		{
 			dataSource = new StringMap();
 			dataSource = Unserializer.run(param.get('dataSource'));
 			trace(dataSource.toString());
-			for (tableName in dataSource.keys())
+			var tnI:Iterator<String> = dataSource.keys();
+			while(tnI.hasNext()) 
 			{
-				tables.push(tableName);
+				var tableName:String = quoteIdent(tnI.next());
+				tableNames.push(tableName);
 				var table:StringMap<String> = dataSource.get(tableName);
 				if(table.exists('fields'))
 					fields.concat(buildFields(tableName, table));
@@ -503,10 +499,10 @@ class Model
 	
 	function buildFields(name:String, table:StringMap<String>):Array<String>
 	{
-		var prefix = (table.exists('alias')?table.get('alias'):name);
+		var prefix = (table.exists('alias')?quoteIdent(table.get('alias')):name);
 		if (table.exists('fields'))
 		{
-			return table.get('fields').split(',').map(function(field) return '$prefix.$field');
+			return table.get('fields').split(',').map(function(field) return '$prefix.${quoteIdent(field)}');
 		}
 		return [];
 	}

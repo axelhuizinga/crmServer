@@ -18,10 +18,10 @@ class AgcApi extends Model
 	
 	public static function create(param:StringMap<String>):Void
 	{
-		var self:AgcApi = new AgcApi();	
+		var self:AgcApi = new AgcApi(param);	
 		self.vicidialUser = S.vicidialUser;
 		self.vicidialPass = S.vicidialPass;
-		return Reflect.callMethod(self, Reflect.field(self,param.get('action')), [param]);
+		return Reflect.callMethod(self, Reflect.field(self, param.get('action')), [param]);
 	}
 	
 	public function check4Update(param:StringMap<String>):Void
