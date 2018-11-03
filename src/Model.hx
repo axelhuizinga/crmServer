@@ -75,8 +75,9 @@ class Model
 	public var filterSql:String;
 	var filterValues:Array<Array<Dynamic>>;
 	public var globals:Dynamic;
+	public var fieldNames:Array<String>;
 	public var tableNames:Array<String>;
-	public var primary:String;
+	public var table:String;
 	public var num_rows(default, null):Int;
 	var dataSource:StringMap<StringMap<String>>;// EACH KEY IS A TABLE NAME
 	var dataSourceSql:String;
@@ -173,7 +174,7 @@ class Model
 		sqlBf.add('SELECT $queryFields FROM ');
 		if (tableNames.length>1)
 		{
-			sqlBf.add(buildJoin());
+			sqlBf.add(joinSql);
 		}		
 		else
 		{
@@ -475,11 +476,13 @@ class Model
 			globals = { };
 			globals.users = query("SELECT first_name, last_name, user_name, active, user_group FROM vicidial_users");
 		}
+		
+		if(table != null)
+		fieldNames = S.tableFields(table);
 		tableNames = [];
 		var fields:Array<String> = [];
 		if(param.get('dataSource') != null)
 		{
-			dataSource = new StringMap();
 			dataSource = Unserializer.run(param.get('dataSource'));
 			trace(dataSource.toString());
 			var tnI:Iterator<String> = dataSource.keys();
@@ -489,10 +492,11 @@ class Model
 				tableNames.push(tableName);
 				var table:StringMap<String> = dataSource.get(tableName);
 				if(table.exists('fields'))
-					fields.concat(buildFields(tableName, table));
+					fields = fields.concat(buildFields(tableName, table));
 			}
 		}
-		queryFields = fields.length>0?fields.join(','):'*';		
+		queryFields = fields.length > 0?fields.join(','):'*';		
+		trace(queryFields);
 		joinSql = buildJoin();
 		filterSql = buildCond();
 	}

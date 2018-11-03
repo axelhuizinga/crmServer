@@ -26,7 +26,7 @@ class Util
 		return copy;
 	}
 	
-	public static inline function randomString(length:Int, ?charactersToUse = "abcdefghijklmnopqrstuvwxyz$_§!%ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"):String
+	public static inline function randomString(length:Int, ?charactersToUse = "abcdefghijklmnopqrstuvwxyz_§!%ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"):String
 	{
 		return RandomStrings.random(length,charactersToUse);
 	}

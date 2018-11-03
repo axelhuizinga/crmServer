@@ -101,13 +101,13 @@ class S
 
 	}
 	
-	public static function add2Response(ob:Response, ex:Bool = false)
+	public static function add2Response(ob:Response, doExit:Bool = false)
 	{
 		if (ob.content != null)
 			response.content += ob.content;
 		if (ob.error != null)
 			response.error += ob.error;
-		if (ex || ob.data != null)
+		if (doExit || ob.data != null)
 		{
 			response.data = ob.data;
 			exit(response);
@@ -121,7 +121,8 @@ class S
 		{
 			Web.setHeader('Content-Type', 'application/json');
 			Web.setHeader("Access-Control-Allow-Headers", "access-control-allow-headers, access-control-allow-methods, access-control-allow-origin");
-			//Web.setHeader("Access-Control-Allow-Origin", "*");
+			Web.setHeader("Access-Control-Allow-Credentials", "true");
+			Web.setHeader("Access-Control-Allow-Origin", "https://192.168.178.56:9000");
 			headerSent = true;
 		}			
 		//var exitValue =  
@@ -157,7 +158,7 @@ class S
 		return (stmt.rowCount()==0 ? 1: stmt.fetch(PDO.FETCH_COLUMN)+1);
 	}
 	
-	public static function tableFields(table:String, db:String = 'asterisk'): Array<String>
+	public static function tableFields(table:String, db:String = 'crm'): Array<String>
 	{		
 		var stmt:PDOStatement = S.my.query(
 			'SELECT GROUP_CONCAT(COLUMN_NAME) FROM information_schema.columns WHERE table_schema = "$db" AND table_name = "$table";');

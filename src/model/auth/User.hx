@@ -33,13 +33,27 @@ class User extends Model
 		}
 	}
 	
+	public function edit():Void
+	{
+		trace(joinSql);
+		trace(filterSql);
+		data =  {
+			count:count(),
+			page: param.exists('page') ? Std.parseInt( param.get('page') ) : 1,
+			rows: doSelect()
+		};
+		json_encode();
+		trace('nono');
+		S.exit({content:'OK'});
+	}
+	
 	public static function login(params:StringMap<String>, secret:String):Bool
 	{
 		var userName:String = params.get('userName');
 		var pass = params.get('pass');
 
-		var m:Model = new Model(params);	
-		var res:NativeArray = m.query('SELECT user_name FROM ${S.db}.users WHERE user_name=\'$userName\' AND active=TRUE');
+		var me:User = new User(params);	
+		var res:NativeArray = me.query('SELECT user_name FROM ${S.db}.users WHERE user_name=\'$userName\' AND active=TRUE');
 		trace('SELECT userName FROM ${S.db}.users WHERE userName=$userName AND active=TRUE');
 		if (!cast res)
 		{
@@ -49,16 +63,12 @@ class User extends Model
 		else{
 			// ACTIVE USER EXISTS
 			var sql = 'SELECT user_name FROM ${S.db}.users WHERE user_name=\'$userName\' AND password=crypt(\'$pass\',password) AND active=TRUE';
-			var ares = Lib.toHaxeArray(m.query(sql));
-			trace(ares);
+			var ares = Lib.toHaxeArray(me.query(sql));
 			if (ares.length == 0 || ares[0] == null)
 			{
 				S.exit({error:'password'});
 				return false;
 			}
-			//var userData = Lib.hashOfAssociativeArray(res[0]);		
-			//var d:Float = Date.now().getTime();
-			//var hours:Float = DateTools.hours(11);
 			var d:Float = DateTools.delta(Date.now(), DateTools.hours(11)).getTime();
 			trace(d + ':' + Date.fromTime(d));
 			var	jwt = JWT.sign({

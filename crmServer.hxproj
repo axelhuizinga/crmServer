@@ -46,7 +46,7 @@
   <!-- Executed before build -->
   <preBuildCommand />
   <!-- Executed after build -->
-  <postBuildCommand alwaysRun="False" />
+  <postBuildCommand alwaysRun="False">cp $(OutputFile)\index.php $(OutputFile)\server.php</postBuildCommand>
   <!-- Other project options -->
   <options>
     <option showHiddenPaths="False" />

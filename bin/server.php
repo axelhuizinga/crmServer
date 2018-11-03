@@ -1,4 +1,5 @@
 <?php
+
 set_include_path(__DIR__.'/lib');
 spl_autoload_register(
 	function($class){
