@@ -85,6 +85,14 @@ class User extends Model
 		
 	}
 	
+	public function save():Bool
+	{
+		var res = update();
+		trace(res);
+		S.exit({content:'OK'});
+		return true;
+	}
+	
 	public static function verify(jwt:String, userName:String):Bool
 	{
 		trace(jwt);

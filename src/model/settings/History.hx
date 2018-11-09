@@ -1,6 +1,6 @@
 package model.settings;
 
-import haxe.ds.StringMap<String>;
+import haxe.ds.StringMap;
 
 /**
  * ...
@@ -9,10 +9,10 @@ import haxe.ds.StringMap<String>;
 class History extends Model 
 {
 
-	public function new(?param:StringMap<String>) 
+	public static function create() 
 	{
-		super(param);
-		
+		var self:History = new History(param);	
+		Reflect.callMethod(self, Reflect.field(self, param.get('action')), [param]);
 	}
 	
 }

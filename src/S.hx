@@ -16,6 +16,7 @@ import model.contacts.Contact;
 import model.admin.CreateHistoryTrigger;
 import model.admin.CreateUsers;
 import model.roles.Users;
+import model.tools.DB;
 import Model.MData;
 //import model.QC;
 //import model.Select;
@@ -27,6 +28,8 @@ import php.Session;
 import php.Web;
 //import tjson.TJSON;
 import haxe.Json;
+import haxe.extern.EitherType;
+import comments.CommentString.*;
 
 using Lambda;
 using Util;
@@ -41,6 +44,8 @@ typedef Response =
 	?error:Dynamic,
 	?data:MData
 }
+
+typedef PDOResult = EitherType<Bool,PDOStatement>;
 
 class S 
 {
@@ -158,10 +163,49 @@ class S
 		return (stmt.rowCount()==0 ? 1: stmt.fetch(PDO.FETCH_COLUMN)+1);
 	}
 	
-	public static function tableFields(table:String, db:String = 'crm'): Array<String>
-	{		
+	public static function tables(db:String = 'crm'): Array<String>
+	{
+		var sql:String = comment(unindent, format) /*
+			SELECT string_agg(TABLE_NAME,',') FROM information_schema.tables WHERE table_schema = '$db'
+			*/;
+		trace(sql);
 		var stmt:PDOStatement = S.my.query(
-			'SELECT GROUP_CONCAT(COLUMN_NAME) FROM information_schema.columns WHERE table_schema = "$db" AND table_name = "$table";');
+			//'SELECT string_agg(TABLE_NAME,\',\') FROM information_schema.tables WHERE table_schema = "$db";'
+			sql
+		);
+		/*if (stmt == false)
+		{
+			exit({error:S.my.errorInfo()});
+		}*/
+		if (S.my.errorCode() != '00000')
+		{
+			trace(S.my.errorCode());
+			trace(S.my.errorInfo());
+			Sys.exit(0);
+		}
+		if (stmt.rowCount() == 1)
+		{
+			return stmt.fetchColumn().split(',');
+		}
+		return null;
+	}
+	
+	public static function tableFields(table:String, db:String = 'crm'): Array<String>
+	{
+		var sql:String = comment(unindent, format) /*
+			SELECT string_agg(COLUMN_NAME,',') FROM information_schema.columns WHERE table_schema = '$db' AND table_name = '$table'
+			*/;
+		var stmt:PDOStatement = S.my.query(
+			comment(unindent, format) /*
+			SELECT string_agg(COLUMN_NAME,',') FROM information_schema.columns WHERE table_schema = '$db' AND table_name = '$table'
+			*/			
+		);
+		if (S.my.errorCode() != '00000')
+		{
+			trace(S.my.errorCode());
+			trace(S.my.errorInfo());
+			Sys.exit(0);
+		}		
 		if (stmt.rowCount() == 1)
 		{
 			return stmt.fetchColumn().split(',');

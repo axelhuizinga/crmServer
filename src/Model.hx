@@ -325,6 +325,29 @@ class Model
 		return res;
 	}
 	
+	public function update():NativeArray
+	{	
+		var sqlBf:StringBuf = new StringBuf();
+
+		sqlBf.add('UPDATE $queryFields ');
+		if (tableNames.length>1)
+		{
+			sqlBf.add(joinSql);
+		}		
+		else
+		{
+			sqlBf.add('$tableNames[0] ');
+		}
+		if (filterSql != null)
+		{
+			sqlBf.add(filterSql);
+		}		
+
+		var limit:String = param.get('limit');
+		buildLimit((limit == null?'25':limit), sqlBf);	//	TODO: CONFIG LIMIT DEFAULT
+		return execute(sqlBf.toString());
+	}
+	
 	public function buildCond():String
 	{
 		if (filterSql != null)
@@ -473,18 +496,18 @@ class Model
 		if (param != null && param.get('fullReload') == 'true')
 		{
 			trace('fullReload');
-			globals = { };
-			globals.users = query("SELECT first_name, last_name, user_name, active, user_group FROM vicidial_users");
+			globals = {users: query("SELECT first_name, last_name, user_name, active, user_group FROM vicidial_users") };
 		}
 		
 		if(table != null)
 		fieldNames = S.tableFields(table);
 		tableNames = [];
 		var fields:Array<String> = [];
+		trace('>'+param.get('dataSource')+'<');
 		if(param.get('dataSource') != null)
 		{
 			dataSource = Unserializer.run(param.get('dataSource'));
-			trace(dataSource.toString());
+			trace(dataSource);
 			var tnI:Iterator<String> = dataSource.keys();
 			while(tnI.hasNext()) 
 			{
