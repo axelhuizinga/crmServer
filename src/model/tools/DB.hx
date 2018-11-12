@@ -17,14 +17,16 @@ class DB extends Model
 	{
 		var tableNames:Array<String> = S.tables();
 		var tableFields:Map<String,String> = new Map();
-		trace(tableNames);
+		//trace(tableNames);
 		for (table in tableNames)
 		{
 			var fieldNames = S.tableFields(table);
 			trace(fieldNames.join(','));
 			tableFields[table] = fieldNames.join(',');
 		}
-		globals = tableFields;
+		trace(tableFields);
+		S.send(tableFields);
+		data.fieldNames = tableFields;
 		json_encode();		
 	}
 	

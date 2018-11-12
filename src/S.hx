@@ -1,5 +1,6 @@
 package;
 
+import haxe.Serializer;
 import haxe.ds.Either;
 import haxe.ds.StringMap;
 import me.cunity.debug.Out;
@@ -55,6 +56,7 @@ class S
 	public static var secret;
 	public static var conf:StringMap<Dynamic>;
 	public static var my:PDO;
+	public static var last_request_time:Date;
 	public static var host:String;
 	public static var request_scheme:String;
 	public static var userName:String;
@@ -72,11 +74,9 @@ class S
 		//trace(conf.get('ini'));		
 		trace(vicidialUser);
 		trace(Syntax.code("$_SERVER['VERIFIED']"));
-		//trace(conf);
-		//Session.start();
-
 		//var pd:Dynamic = Web.getPostData();
-		var now:String = DateTools.format(Date.now(), "%d.%m.%y %H:%M:%S");
+		last_request_time = Date.now();
+		var now:String = DateTools.format(last_request_time, "%d.%m.%y %H:%M:%S");
 		response = {content:'',error:''};
 		var params:StringMap<String> = Web.getParams();
 		
@@ -96,7 +96,7 @@ class S
 		var userName:String = params.get('userName');
 		if (jwt.length > 0)
 		{
-			if(User.verify(jwt, userName))
+			if(User.verify(jwt, userName,params))
 				Model.dispatch(params);			
 		}
 		
@@ -132,11 +132,25 @@ class S
 		}			
 		//var exitValue =  
 		//trace( Syntax.code("json_encode({0})",r.data));
-		//trace(r);
+		//trace(Json.stringify(r));
 		//trace( Syntax.code("json_encode({0})",r));
 		//Sys.print(Syntax.code("json_encode({0})",r));
 		Sys.print(Json.stringify(r));
 		Sys.exit(0);		
+	}
+	
+	public static function send(r:Map<String,Dynamic>)
+	{
+		if (!headerSent)
+		{
+			Web.setHeader('Content-Type', 'text/plain');
+			Web.setHeader("Access-Control-Allow-Headers", "access-control-allow-headers, access-control-allow-methods, access-control-allow-origin");
+			Web.setHeader("Access-Control-Allow-Credentials", "true");
+			Web.setHeader("Access-Control-Allow-Origin", "https://192.168.178.56:9000");
+			headerSent = true;
+		}			
+		Sys.print(Serializer.run(r));
+		Sys.exit(0);
 	}
 	
 	public static function dump(d:Dynamic):Void

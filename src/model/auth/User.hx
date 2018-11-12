@@ -1,4 +1,5 @@
 package model.auth;
+import haxe.Serializer;
 import haxe.crypto.Sha256;
 import haxe.ds.StringMap;
 import jwt.JWT;
@@ -6,6 +7,7 @@ import php.Exception;
 import php.Lib;
 import php.NativeArray;
 import php.Web;
+import php.db.PDOStatement;
 
 /**
  * ...
@@ -37,14 +39,14 @@ class User extends Model
 	{
 		trace(joinSql);
 		trace(filterSql);
-		data =  {
+		/*data =  {
 			count:count(),
 			page: param.exists('page') ? Std.parseInt( param.get('page') ) : 1,
 			rows: doSelect()
-		};
-		json_encode();
-		trace('nono');
-		S.exit({content:'OK'});
+		};*/
+		var dm:Map<String,Dynamic> = Lib.hashOfAssociativeArray(doSelect());
+		trace(dm);
+		S.send(dm);
 	}
 	
 	public static function login(params:StringMap<String>, secret:String):Bool
@@ -89,11 +91,26 @@ class User extends Model
 	{
 		var res = update();
 		trace(res);
-		S.exit({content:'OK'});
+		S.send(['content'=>'OK']);
 		return true;
 	}
 	
-	public static function verify(jwt:String, userName:String):Bool
+	static function saveRequest(userName:String, params:StringMap<String>):Bool
+	{
+		var request:String = Serializer.run(params);
+		var rTime:String = DateTools.format(S.last_request_time, "'%Y-%m-%d %H:%M:%S'");//,request=?
+		var stmt:PDOStatement = S.my.prepare('UPDATE users SET online=TRUE,last_request_time=${rTime},"request"=:request WHERE user_name=:user_name');
+		trace('UPDATE users SET last_request_time=${rTime},request=\'$request\' WHERE user_name=\'$userName\'');
+
+		var success:Bool = Model.paramExecute(stmt, //null
+		Lib.associativeArrayOfObject({':user_name': '$userName', ':request': '$request'})
+		);
+		trace(stmt.errorCode());
+		trace(stmt.errorInfo());
+		return success;
+	}
+	
+	public static function verify(jwt:String, userName:String,?params:StringMap<String>):Bool
 	{
 		trace(jwt);
 		try{
@@ -106,6 +123,7 @@ class User extends Model
 				{
 					case Valid(payload):
 						// JWT VALID AND NOT OLDER THAN 11 h
+						saveRequest(userName, params);
 						true;
 					default:
 						S.exit({error:'JWT invalid!'});

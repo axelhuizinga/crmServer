@@ -33,7 +33,7 @@ typedef MData =
 	@:optional var content:String;
 	@:optional var choice:NativeArray;
 	@:optional var fieldDefault:NativeArray;
-	@:optional var fieldNames:NativeArray;
+	@:optional var fieldNames:Map<String,String>;
 	@:optional var fieldRequired:NativeArray;
 	@:optional var jwt:String;
 	@:optional var optionsMap:NativeArray;
@@ -114,6 +114,30 @@ class Model
 		}
 	}
 	
+	public static function paramExecute(stmt:PDOStatement, ?values:NativeArray):Bool
+	{
+		var values2bind:NativeArray = null;
+		var i:Int = 0;
+		var type:Int = PDO.PARAM_STR; 
+		/*if (values != null)
+		for (v in values)
+		{
+			trace(v);
+			values2bind[i++] = v;
+			if (!stmt.bindValue(i, v, type))//TODO: CHECK POSTGRES DRIVER OPTIONS
+			{
+				trace('ooops:' + stmt.errorInfo());
+				Sys.exit(0);
+			}
+		}	*/		
+		trace(Std.string(values));
+		if (!stmt.execute(values))
+		{
+			trace(stmt.errorInfo());
+			return false;
+		}
+		return true;
+	}
 	public function count():Int
 	{
 		var sqlBf:StringBuf = new StringBuf();
@@ -286,7 +310,7 @@ class Model
 			if (!success)
 			{
 				trace(stmt.errorInfo());
-				return untyped Syntax.code("array({0}, {1})", 'ERROR', stmt.error);
+				return Syntax.assocDecl({'ERROR': stmt.errorInfo()});
 			}
 			//var result:EitherType<MySQLi_Result,Bool> = stmt.get_result();
 			num_rows = stmt.rowCount();
