@@ -6,6 +6,6 @@
 -cp lib
 -cp src
 -php bin
--D php7
+-D 
 -main S
 -dce std

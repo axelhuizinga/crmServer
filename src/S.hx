@@ -53,7 +53,7 @@ class S
 	static inline var debug:Bool = true;
 	static var headerSent:Bool = false;
 	static var response:Response;
-	public static var secret;
+	public static var secret:String;
 	public static var conf:StringMap<Dynamic>;
 	public static var my:PDO;
 	public static var last_request_time:Date;
@@ -139,7 +139,7 @@ class S
 		Sys.exit(0);		
 	}
 	
-	public static function send(r:Map<String,Dynamic>)
+	public static function send(r:String)
 	{
 		if (!headerSent)
 		{
@@ -149,7 +149,7 @@ class S
 			Web.setHeader("Access-Control-Allow-Origin", "https://192.168.178.56:9000");
 			headerSent = true;
 		}			
-		Sys.print(Serializer.run(r));
+		Sys.print(r);
 		Sys.exit(0);
 	}
 	

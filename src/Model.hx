@@ -116,20 +116,6 @@ class Model
 	
 	public static function paramExecute(stmt:PDOStatement, ?values:NativeArray):Bool
 	{
-		var values2bind:NativeArray = null;
-		var i:Int = 0;
-		var type:Int = PDO.PARAM_STR; 
-		/*if (values != null)
-		for (v in values)
-		{
-			trace(v);
-			values2bind[i++] = v;
-			if (!stmt.bindValue(i, v, type))//TODO: CHECK POSTGRES DRIVER OPTIONS
-			{
-				trace('ooops:' + stmt.errorInfo());
-				Sys.exit(0);
-			}
-		}	*/		
 		trace(Std.string(values));
 		if (!stmt.execute(values))
 		{

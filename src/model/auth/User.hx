@@ -1,8 +1,10 @@
 package model.auth;
 import haxe.Serializer;
 import haxe.crypto.Sha256;
+import haxe.ds.IntMap;
 import haxe.ds.StringMap;
 import jwt.JWT;
+import model.tools.DB;
 import php.Exception;
 import php.Lib;
 import php.NativeArray;
@@ -44,7 +46,13 @@ class User extends Model
 			page: param.exists('page') ? Std.parseInt( param.get('page') ) : 1,
 			rows: doSelect()
 		};*/
-		var dm:Map<String,Dynamic> = Lib.hashOfAssociativeArray(doSelect());
+		//var dm:IntMap<Map<String,Dynamic>> = Lib.toHaxeArray(doSelect());
+		//var dm:Dynamic = doSelect();
+		//S.exit({data:doSelect()});
+		//var dm:Map<String,Dynamic> = Lib.hashOfAssociativeArray(doSelect()[0]);
+		var dm:String = DB.serializeRows(doSelect());
+		//var dm:Map<String,Dynamic> = [];
+		//Lib.hashOfAssociativeArray(doSelect());
 		trace(dm);
 		S.send(dm);
 	}
@@ -91,7 +99,7 @@ class User extends Model
 	{
 		var res = update();
 		trace(res);
-		S.send(['content'=>'OK']);
+		S.send('OK');
 		return true;
 	}
 	
