@@ -296,7 +296,7 @@ class Model
 			if (!success)
 			{
 				trace(stmt.errorInfo());
-				return Syntax.assocDecl({'ERROR': stmt.errorInfo()});
+				return Syntax.assocDecl({'error': stmt.errorInfo()});
 			}
 			//var result:EitherType<MySQLi_Result,Bool> = stmt.get_result();
 			num_rows = stmt.rowCount();
@@ -306,7 +306,7 @@ class Model
 			}			
 			return(data);	
 		}
-		return Syntax.assocDecl({'ERROR': stmt.errorInfo()});
+		return Syntax.assocDecl({'error': stmt.errorInfo()});
 	}
 	
 	public  function query(sql:String, ?resultType):NativeArray

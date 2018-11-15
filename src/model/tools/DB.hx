@@ -1,10 +1,12 @@
 package model.tools;
 import haxe.Serializer;
 import haxe.ds.StringMap;
+import org.msgpack.MsgPack;
 import php.Lib;
 import php.NativeArray;
 import php.Syntax;
 import comments.CommentString.*;
+import php.db.PDO;
 import php.db.PDOStatement;
 
 /**
@@ -41,7 +43,19 @@ class DB extends Model
 		{
 			updateFieldsTable(tableFields);
 		}
-		S.send(Serializer.run(tableFields));	
+		//S.send(Serializer.run(tableFields));	
+		
+		var sql = "SELECT * FROM _table_fields";
+		trace(sql);
+		var stmt:PDOStatement = S.my.query(sql, PDO.FETCH_ASSOC);
+		if (untyped stmt == false)
+		{
+			trace(S.my.errorInfo());
+			S.send(Serializer.run(['error'=>S.my.errorInfo()]));
+		}
+		var tableFields:NativeArray = stmt.fetchAll(PDO.FETCH_ASSOC);//DB.serializeRows(
+		trace('tableFields found: ' + stmt.rowCount());		
+		S.send(DB.serializeRows(tableFields));
 	}
 	
 	public function updateFieldsTable(tableFields:Map<String,String>)
@@ -69,7 +83,7 @@ class DB extends Model
 			if (untyped res == false)
 			{
 				trace(S.my.errorInfo());
-				S.send(Serializer.run(['ERROR'=>S.my.errorInfo()]));
+				S.send(Serializer.run(['error'=>S.my.errorInfo()]));
 			}
 			trace('Inserted ${tableName}: ' + res.rowCount());
 		}
@@ -83,6 +97,7 @@ class DB extends Model
 		{
 			sRows.push(Lib.hashOfAssociativeArray(v));
 		});
+		return MsgPack.encode(sRows);
 		return Serializer.run(sRows);
 	}
 	

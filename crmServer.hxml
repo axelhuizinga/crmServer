@@ -2,6 +2,7 @@
 -lib jwt
 -lib haxe-strings
 -lib tjson
+-lib msgpack-haxe
 -cp C:/www/remotion4.me/httpdocs/lib
 -cp lib
 -cp src

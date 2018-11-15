@@ -34,6 +34,7 @@
     <library name="jwt" />
     <library name="haxe-strings" />
     <library name="tjson" />
+    <library name="msgpack-haxe" />
   </haxelib>
   <!-- Class files to compile (other referenced classes will automatically be included) -->
   <compileTargets>

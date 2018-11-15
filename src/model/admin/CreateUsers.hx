@@ -51,7 +51,7 @@ class CreateUsers extends Model
 		if (untyped res == false)
 		{
 			trace(S.my.errorInfo());
-			S.exit({data:'ERROR'});
+			S.exit({data:'error'});
 		}
 		trace('Inserted ? ' + res.rowCount());
 		trace('Inserted ${contact.full_name}: ' + res.rowCount());
@@ -155,7 +155,7 @@ class CreateUsers extends Model
 			var contactId:Int = addContact(iRow);
 			if (contactId == null)
 			{
-				S.exit({data:'ERROR'});
+				S.exit({data:'error'});
 			}
 			var initialPass:String = Util.randomString(13);
 			var external_text = row2jsonb(iRow);
@@ -173,7 +173,7 @@ class CreateUsers extends Model
 			if (untyped res == false)
 			{
 				trace(S.my.errorInfo());
-				S.exit({data:'ERROR'});
+				S.exit({data:'error'});
 			}
 			trace('Inserted ${iRow.user_group}: ' + res.rowCount());
 			//S.exit({data:'OK'});
