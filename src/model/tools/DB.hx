@@ -1,5 +1,5 @@
 package model.tools;
-import haxe.Serializer;
+import hxbit.Serializer;
 import haxe.ds.StringMap;
 import org.msgpack.MsgPack;
 import php.Lib;
@@ -45,12 +45,11 @@ class DB extends Model
 		{
 			updateFieldsTable(tableFields);
 		}
-		//S.send(Serializer.run(tableFields));	
+		var filter:String = (true?'':"WHERE table_name NOT LIKE '\\_%'");	
 		
 		var sql =  comment(unindent, format) /*
-				SELECT table_name,fh.key field_name, fh.value field_hints FROM _table_fields _t1 
-				CROSS JOIN LATERAL (SELECT * FROM jsonb_each(field_hints)) fh 
-				WHERE table_name NOT LIKE '\_%' 
+				SELECT table_name,field_name, readonly, element, "any" FROM _table_fields 
+				$filter 
 				ORDER BY table_name
 				*/;
 		trace(sql);
@@ -58,11 +57,11 @@ class DB extends Model
 		if (untyped stmt == false)
 		{
 			trace(S.my.errorInfo());
-			S.send(Serializer.run(['error'=>S.my.errorInfo()]));
+			//S.send(Serializer.run(['error'=>S.my.errorInfo()]));
 		}
 		var tableFields:NativeArray = stmt.fetchAll(PDO.FETCH_ASSOC);//DB.serializeRows(
 		trace('tableFields found: ' + stmt.rowCount());		
-		DB.sendRows(tableFields);
+		sendRows(tableFields);
 	}
 	
 	public function updateFieldsTable(tableFields:Map<String,String>)
@@ -78,8 +77,7 @@ class DB extends Model
 				'${f}','{}'::jsonb
 				*/;
 				return s;
-			});
-			
+			});			
 			var fieldsSql = sqlFields.join(",");
 			var sql = comment(unindent, format) /*
 			INSERT INTO crm._table_fields VALUES (DEFAULT, '$tableName','{$fieldNames}', jsonb_build_object($fieldsSql), 1)
@@ -90,23 +88,24 @@ class DB extends Model
 			if (untyped res == false)
 			{
 				trace(S.my.errorInfo());
-				S.send(Serializer.run(['error'=>S.my.errorInfo()]));
+				//S.send(Serializer.run(['error'=>S.my.errorInfo()]));
 			}
 			trace('Inserted ${tableName}: ' + res.rowCount());
 		}
 	}	
 	
-	public static function sendRows(rows:NativeArray):Bool
+	public function sendRows(rows:NativeArray):Bool
 	{
 		//var sRows:Serializer = new Serializer();
 		//var sRows:Array<StringMap<String>> = new Array();
 		//trace(rows);
-		var sRows:Array<Dynamic> = new Array();
+		var s:Serializer = new Serializer();
+		
 		Syntax.foreach(rows, function(k:Int, v:Dynamic)
 		{
-			sRows.push(Lib.hashOfAssociativeArray(v));			
+			dbData.dataRows.push(Lib.hashOfAssociativeArray(v));			
 		});
-		trace(sRows[29]);
+		trace(dbData.dataRows[29]);
 		//Web.setHeader('Content-Type', 'text/plain');
 		Web.setHeader('Content-Type', 'text/html charset=utf-8');
 		Web.setHeader("Access-Control-Allow-Headers", "access-control-allow-headers, access-control-allow-methods, access-control-allow-origin");
@@ -114,8 +113,9 @@ class DB extends Model
 		Web.setHeader("Access-Control-Allow-Origin", "https://192.168.178.56:9000");
 		var out = File.write("php://output", true);
 		out.bigEndian = true;
-		out.write(MsgPack.encode(sRows));
-		trace(MsgPack.encode(sRows).toString());
+		//out.write(MsgPack.encode(sRows));
+		out.write(s.serialize(dbData));
+		//trace(MsgPack.encode(sRows).toString());
 		//trace(MsgPack.decode(MsgPack.encode(sRows)));
 		//return MsgPack.encode(sRows).toString();
 		//return Serializer.run(sRows);
@@ -123,13 +123,13 @@ class DB extends Model
 		return true;
 	}
 	
-	public static function serializeRows(rows:NativeArray):String
+	/*public static function serializeRows(rows:NativeArray):Void
 	{
-		var sRows:Array<StringMap<String>> = new Array();
+		var s:Serializer = new Serializer();
 		Syntax.foreach(rows, function(k:Int, v:Dynamic)
 		{
-			sRows.push(Lib.hashOfAssociativeArray(v));
+			dbData.dbRows.push(Lib.hashOfAssociativeArray(v));
 		});
-		return Serializer.run(sRows);
-	}	
+		s.serialize(sRows);
+	}	*/
 }

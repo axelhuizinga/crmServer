@@ -3,6 +3,8 @@ import haxe.Unserializer;
 import haxe.ds.StringMap;
 import haxe.extern.EitherType;
 import haxe.Json;
+import haxe.io.Bytes;
+import hxbit.Serializer;
 import php.Lib;
 import php.NativeArray;
 import model.VicidialUsers;
@@ -11,6 +13,7 @@ import me.cunity.php.db.*;
 import php.Syntax;
 import php.db.PDO;
 import php.db.PDOStatement;
+import shared.DbData;
 import sys.db.*;
 
 using Lambda;
@@ -43,6 +46,13 @@ typedef MData =
 	@:optional var userMap:Array<UserInfo>;
 	@:optional var userName:String;
 };
+
+typedef RData =
+{
+	?rows:NativeArray,
+	?error:StringMap<Dynamic>,
+	?info:StringMap<Dynamic>
+}
 
 @:enum
 abstract JoinType(String)
@@ -79,6 +89,7 @@ class Model
 	public var tableNames:Array<String>;
 	public var table:String;
 	public var num_rows(default, null):Int;
+	var dbData:DbData;
 	var dataSource:StringMap<StringMap<String>>;// EACH KEY IS A TABLE NAME
 	var dataSourceSql:String;
 	var param:StringMap<String>;
@@ -241,12 +252,11 @@ class Model
 	
 	public function find():Void
 	{	
-		data =  {
-			count:count(),
-			page: param.exists('page') ? Std.parseInt( param.get('page') ) : 1,
+		var rData:RData =  {
+			info:['count'=>count(),'page'=>(param.exists('page') ? Std.parseInt( param.get('page') ) : 1)],
 			rows: doSelect()
 		};
-		json_encode();
+		S.sendData(dbData,rData);
 	}
 	
 	public function execute(sql:String):NativeArray
@@ -498,6 +508,8 @@ class Model
 		this.param = param;
 		data = {};
 		data.rows = new NativeArray();
+		dbData = new DbData();
+		
 		if (param.exists('filter'))
 		{			
 			filterValues = new Array();
@@ -592,6 +604,16 @@ class Model
 		}
 		//trace(ret);
 		return ret;
+	}
+	
+	function serializeRows(rows:NativeArray):Bytes
+	{
+		var s:Serializer = new Serializer();
+		Syntax.foreach(rows, function(k:Int, v:Dynamic)
+		{
+			dbData.dataRows.push(Lib.hashOfAssociativeArray(v));
+		});
+		return s.serialize(dbData);
 	}
 	
 }

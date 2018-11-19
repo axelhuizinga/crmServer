@@ -1,6 +1,5 @@
 package;
 import haxe.ds.StringMap;
-import hx.strings.RandomStrings;
 
 /**
  * ...
@@ -28,6 +27,6 @@ class Util
 	
 	public static inline function randomString(length:Int, ?charactersToUse = "abcdefghijklmnopqrstuvwxyz_§!%ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"):String
 	{
-		return RandomStrings.random(length,charactersToUse);
+		return Random.string(length,charactersToUse);
 	}
 }

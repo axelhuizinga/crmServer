@@ -1,12 +1,13 @@
 package;
 
-import haxe.Serializer;
 import haxe.ds.Either;
 import haxe.ds.StringMap;
+import haxe.io.Bytes;
 import me.cunity.debug.Out;
 import php.Syntax;
 import php.db.PDO;
 import php.db.PDOStatement;
+import shared.DbData;
 
 import me.cunity.php.Services_JSON;
 import phprbac.Rbac;
@@ -19,6 +20,7 @@ import model.admin.CreateUsers;
 import model.roles.Users;
 import model.tools.DB;
 import Model.MData;
+import Model.RData;
 //import model.QC;
 //import model.Select;
 import model.auth.User;
@@ -30,6 +32,8 @@ import php.Web;
 //import tjson.TJSON;
 import haxe.Json;
 import haxe.extern.EitherType;
+import hxbit.Serializer;
+import sys.io.File;
 import comments.CommentString.*;
 
 using Lambda;
@@ -151,6 +155,34 @@ class S
 		}			
 		Sys.print(r);
 		Sys.exit(0);
+	}
+	
+	public static function sendData(dbData:DbData, data:RData):Bool
+	{
+		//var sRows:Serializer = new Serializer();
+		//var sRows:Array<StringMap<String>> = new Array();
+		//trace(rows);
+		var s:Serializer = new Serializer();
+		dbData.dataInfo = data.info;
+		Syntax.foreach(data.rows, function(k:Int, v:Dynamic)
+		{
+			dbData.dataRows.push(Lib.hashOfAssociativeArray(v));			
+		});
+		return sendbytes(s.serialize(dbData));
+	}
+	
+	public static function sendbytes(b:Bytes):Bool
+	{		
+		Web.setHeader('Content-Type', 'text/plain');
+		Web.setHeader("Access-Control-Allow-Headers", "access-control-allow-headers, access-control-allow-methods, access-control-allow-origin");
+		Web.setHeader("Access-Control-Allow-Credentials", "true");
+		Web.setHeader("Access-Control-Allow-Origin", "https://192.168.178.56:9000");
+		
+		var out = File.write("php://output", true);
+		out.bigEndian = true;
+		out.write(b);
+		Sys.exit(0);
+		return true;
 	}
 	
 	public static function dump(d:Dynamic):Void

@@ -2,7 +2,6 @@ package model.admin;
 
 import haxe.Http;
 import haxe.Json;
-import hx.strings.RandomStrings;
 import php.db.PDO;
 //import tjson.TJSON;
 import haxe.ds.StringMap;

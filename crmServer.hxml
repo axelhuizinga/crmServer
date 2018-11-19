@@ -1,6 +1,6 @@
 -lib CommentString
 -lib jwt
--lib haxe-strings
+-lib random
 -lib tjson
 -lib msgpack-haxe
 -lib hxbit

@@ -32,7 +32,7 @@
   <haxelib>
     <library name="CommentString" />
     <library name="jwt" />
-    <library name="haxe-strings" />
+    <library name="random" />
     <library name="tjson" />
     <library name="msgpack-haxe" />
     <library name="hxbit" />
