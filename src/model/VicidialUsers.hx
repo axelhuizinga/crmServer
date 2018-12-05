@@ -51,7 +51,7 @@ class VicidialUsers extends Model
 	
 	public function ex_user(?user:String):String
 	{
-		user = S.my.quote(user);
+		user = S.dbh.quote(user);
 		var ex_user_data:NativeArray = query('SELECT * FROM fly_crm.agent_ids WHERE ANr=$user');
 		return '';
 	}

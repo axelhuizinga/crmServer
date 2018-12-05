@@ -43,7 +43,7 @@ typedef CustomField =
 		var fields:String = q.get('fields');	
 		//trace(fields);
 		//sqlBf.add('SELECT ' + fieldFormat((fields != null ? fields.split(',').map(function(f:String) return quoteField(f)).join(',') : '*' )));
-		sqlBf.add('SELECT ' + (fields != null ? fieldFormat( fields.split(',').map(function(f:String) return S.my.quote(f)).join(',') ): '*' ));
+		sqlBf.add('SELECT ' + (fields != null ? fieldFormat( fields.split(',').map(function(f:String) return S.dbh.quote(f)).join(',') ): '*' ));
 		var qTable:String = (q.get('table').any2bool() ? q.get('table') : table);
 		var joinCond:String = (q.get('joincond').any2bool() ? q.get('joincond') : null);
 		var joinTable:String = (q.get('jointable').any2bool() ? q.get('jointable') : null);
@@ -52,12 +52,12 @@ typedef CustomField =
 		var filterTables:String = '';
 		if (q.get('filter').any2bool() )
 		{
-			filterTables = q.get('filter_tables').split(',').map(function(f:String) return 'fly_crm.' + S.my.quote(f)).join(',');			
-			sqlBf.add(' FROM $filterTables,' + S.my.quote(qTable));
+			filterTables = q.get('filter_tables').split(',').map(function(f:String) return 'fly_crm.' + S.dbh.quote(f)).join(',');			
+			sqlBf.add(' FROM $filterTables,' + S.dbh.quote(qTable));
 		}
 		else
-			sqlBf.add(' FROM ' + S.my.quote(qTable));		
-		//sqlBf.add(' FROM ' + S.my.quote(qTable));		
+			sqlBf.add(' FROM ' + S.dbh.quote(qTable));		
+		//sqlBf.add(' FROM ' + S.dbh.quote(qTable));		
 		if (joinTable != null)
 			sqlBf.add(' INNER JOIN $joinTable');
 		if (joinCond != null)
@@ -68,7 +68,7 @@ typedef CustomField =
 
 		if (q.get('filter').any2bool())
 		{			
-			buildCond(q.get('filter').split(',').map( function(f:String) return 'fly_crm.' + S.my.quote(f) 
+			buildCond(q.get('filter').split(',').map( function(f:String) return 'fly_crm.' + S.dbh.quote(f) 
 			).join(','), false);
 			
 			if (joinTable == 'vicidial_users')

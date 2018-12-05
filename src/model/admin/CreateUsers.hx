@@ -46,10 +46,10 @@ class CreateUsers extends Model
 				select id from new_contact;
 			*/;
 		trace(sql);
-		var res:PDOStatement = S.my.query(sql,PDO.FETCH_ASSOC);
+		var res:PDOStatement = S.dbh.query(sql,PDO.FETCH_ASSOC);
 		if (untyped res == false)
 		{
-			trace(S.my.errorInfo());
+			trace(S.dbh.errorInfo());
 			S.exit({data:'error'});
 		}
 		trace('Inserted ? ' + res.rowCount());
@@ -64,7 +64,7 @@ class CreateUsers extends Model
 		sql = comment(unindent, format) /*		
 		SELECT id FROM contacts WHERE phone_number='${contact.phone_number}' AND first_name='${name[0]}' AND last_name='${name[1]}'
 		*/;
-		res = S.my.query(sql, PDO.FETCH_ASSOC);
+		res = S.dbh.query(sql, PDO.FETCH_ASSOC);
 		if (res.rowCount() == 1)
 		{
 			@:arrayAccess
@@ -72,7 +72,7 @@ class CreateUsers extends Model
 			trace(found);
 			return found['id'];
 		}		
-		trace(sql +':' + S.my.errorInfo());
+		trace(sql +':' + S.dbh.errorInfo());
 		return null;		
 	}
 
@@ -125,7 +125,7 @@ class CreateUsers extends Model
 		{
 			//trace(iRow.grund);
 			var sql = 'INSERT INTO crm.end_reasons VALUES (${iRow.id}, \'${iRow.grund}\', 100,1) ON CONFLICT DO NOTHING;';
-			var res:PDOStatement = S.my.query(sql);			
+			var res:PDOStatement = S.dbh.query(sql);			
 			res.execute();
 			trace(res.rowCount());
 		}
@@ -136,7 +136,7 @@ class CreateUsers extends Model
 		for (iRow in rows)
 		{
 			var sql = 'INSERT INTO crm.user_groups VALUES (DEFAULT, \'${iRow.user_group}\', \'${iRow.group_name}\',DEFAULT, 1,100) ON CONFLICT DO NOTHING;';
-			var res:PDOStatement = S.my.query(sql);			
+			var res:PDOStatement = S.dbh.query(sql);			
 			res.execute();
 			trace('Inserted ${iRow.user_group}: ' + res.rowCount());
 		}
@@ -168,10 +168,10 @@ class CreateUsers extends Model
 			ON CONFLICT (user_name) DO UPDATE SET contact=$contactId 
 			*/;
 			trace(sql);
-			var res:PDOStatement = S.my.query(sql);
+			var res:PDOStatement = S.dbh.query(sql);
 			if (untyped res == false)
 			{
-				trace(S.my.errorInfo());
+				trace(S.dbh.errorInfo());
 				S.exit({data:'error'});
 			}
 			trace('Inserted ${iRow.user_group}: ' + res.rowCount());

@@ -35,17 +35,17 @@ class CreateHistoryTrigger extends Model
 			WHERE table_schema LIKE 'crm' GROUP BY (table_schema)
 		*/;
 		//trace(sql);
-		var getTableNames:PDOStatement = S.my.query(sql);
+		var getTableNames:PDOStatement = S.dbh.query(sql);
 		if (!untyped getTableNames)
 		{
-			trace(S.my.errorInfo());
+			trace(S.dbh.errorInfo());
 			Sys.exit(0);
 		}
 		getTableNames.execute();
 		trace(getTableNames.rowCount);
 
 		var tableNames:Array<String> = getTableNames.fetchColumn().split(',');
-		var getActiveTriggerTables:PDOStatement = S.my.query( comment(unindent, format) /*
+		var getActiveTriggerTables:PDOStatement = S.dbh.query( comment(unindent, format) /*
 		select string_agg(tbl.relname, ',') as trigger_tables
 FROM pg_trigger trg JOIN pg_class tbl on trg.tgrelid = tbl.oid
 WHERE trg.tgname = 'audit_trigger_row' AND  trg.tgenabled='O'
@@ -82,10 +82,10 @@ GROUP BY(trg.tgname);
 		*/;		
 		
 		trace(activateTrigger);
-		S.my.exec(activateTrigger);
-		if (S.my.errorCode() != '00000')
+		S.dbh.exec(activateTrigger);
+		if (S.dbh.errorCode() != '00000')
 		{
-			trace(S.my.errorInfo());
+			trace(S.dbh.errorInfo());
 			Sys.exit(0);
 		}
 		

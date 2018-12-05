@@ -1,7 +1,6 @@
 package model.tools;
 import hxbit.Serializer;
 import haxe.ds.StringMap;
-import org.msgpack.MsgPack;
 import php.Lib;
 import php.NativeArray;
 import php.Syntax;
@@ -48,16 +47,16 @@ class DB extends Model
 		var filter:String = (true?'':"WHERE table_name NOT LIKE '\\_%'");	
 		
 		var sql =  comment(unindent, format) /*
-				SELECT table_name,field_name, readonly, element, "any" FROM _table_fields 
+				SELECT id,table_name,field_name,readonly,element,"any" FROM _table_fields 
 				$filter 
-				ORDER BY table_name
+				ORDER BY table_name,field_name
 				*/;
 		trace(sql);
-		var stmt:PDOStatement = S.my.query(sql, PDO.FETCH_ASSOC);
+		var stmt:PDOStatement = S.dbh.query(sql, PDO.FETCH_ASSOC);
 		if (untyped stmt == false)
 		{
-			trace(S.my.errorInfo());
-			//S.send(Serializer.run(['error'=>S.my.errorInfo()]));
+			trace(S.dbh.errorInfo());
+			//S.send(Serializer.run(['error'=>S.dbh.errorInfo()]));
 		}
 		var tableFields:NativeArray = stmt.fetchAll(PDO.FETCH_ASSOC);//DB.serializeRows(
 		trace('tableFields found: ' + stmt.rowCount());		
@@ -84,44 +83,15 @@ class DB extends Model
 			ON CONFLICT (table_name) DO UPDATE SET field_names='{$fieldNames}', field_hints=jsonb_build_object($fieldsSql)
 			*/;
 			trace(sql);
-			var res:PDOStatement = S.my.query(sql);
+			var res:PDOStatement = S.dbh.query(sql);
 			if (untyped res == false)
 			{
-				trace(S.my.errorInfo());
-				//S.send(Serializer.run(['error'=>S.my.errorInfo()]));
+				trace(S.dbh.errorInfo());
+				//S.send(Serializer.run(['error'=>S.dbh.errorInfo()]));
 			}
 			trace('Inserted ${tableName}: ' + res.rowCount());
 		}
-	}	
-	
-	public function sendRows(rows:NativeArray):Bool
-	{
-		//var sRows:Serializer = new Serializer();
-		//var sRows:Array<StringMap<String>> = new Array();
-		//trace(rows);
-		var s:Serializer = new Serializer();
-		
-		Syntax.foreach(rows, function(k:Int, v:Dynamic)
-		{
-			dbData.dataRows.push(Lib.hashOfAssociativeArray(v));			
-		});
-		trace(dbData.dataRows[29]);
-		//Web.setHeader('Content-Type', 'text/plain');
-		Web.setHeader('Content-Type', 'text/html charset=utf-8');
-		Web.setHeader("Access-Control-Allow-Headers", "access-control-allow-headers, access-control-allow-methods, access-control-allow-origin");
-		Web.setHeader("Access-Control-Allow-Credentials", "true");
-		Web.setHeader("Access-Control-Allow-Origin", "https://192.168.178.56:9000");
-		var out = File.write("php://output", true);
-		out.bigEndian = true;
-		//out.write(MsgPack.encode(sRows));
-		out.write(s.serialize(dbData));
-		//trace(MsgPack.encode(sRows).toString());
-		//trace(MsgPack.decode(MsgPack.encode(sRows)));
-		//return MsgPack.encode(sRows).toString();
-		//return Serializer.run(sRows);
-		Sys.exit(0);
-		return true;
-	}
+	}		
 	
 	/*public static function serializeRows(rows:NativeArray):Void
 	{

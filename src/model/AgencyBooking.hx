@@ -28,20 +28,20 @@ class AgencyBooking extends Model
 	{
 		var agency_project = Std.parseInt(param.get('agency_project'));
 		var betrag = Std.parseFloat(param.get('betrag'));
-		var start_datum =  S.my.real_escape_string(param.get('start_datum'));
+		var start_datum =  S.dbh.real_escape_string(param.get('start_datum'));
 		var user:String = S.user;
 		var sB:StringBuf = new StringBuf();
 		var bFields:Array<String> = booking_fields.split(',').slice(2);
 		sB.add('INSERT INTO fly_crm.agentur_buchungen ');
 		sB.add( bFields.join(',') );
 		sB.add(' VALUES(' + bFields.map(function(s:String) return '?').join(',') + ') ' );
-		var res:EitherType < MySQLi_Result, Bool > = S.my.query(sB.toString());
+		var res:EitherType < MySQLi_Result, Bool > = S.dbh.query(sB.toString());
 		if (!res.any2bool())
 		{
 			trace('failed to:' + sB.toString());
 			return false;
 		}
-		return cast S.my.insert_id;		
+		return cast S.dbh.insert_id;		
 	}
 	
 }

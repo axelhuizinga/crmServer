@@ -27,7 +27,7 @@ import model.auth.User;
 import php.Lib;
 import me.cunity.php.Debug;
 import php.NativeArray;
-import php.Session;
+//import php.Session;
 import php.Web;
 //import tjson.TJSON;
 import haxe.Json;
@@ -59,11 +59,11 @@ class S
 	static var response:Response;
 	public static var secret:String;
 	public static var conf:StringMap<Dynamic>;
-	public static var my:PDO;
+	public static var dbh:PDO;
 	public static var last_request_time:Date;
 	public static var host:String;
 	public static var request_scheme:String;
-	public static var userName:String;
+	public static var user_name:String;
 	public static var db:String;
 	public static var dbHost:String;
 	public static var dbUser:String;
@@ -90,17 +90,20 @@ class S
 		var action:String = params.get('action');
 		if (action.length == 0 || params.get('className') == null)
 		{
+			trace(Web.getMethod());
+			trace(Web.getClientHeaders());
 			exit( { error:"required params action and/or className missing" } );
 		}
 			
-		my = new PDO('pgsql:host=$dbHost;dbname=$db',dbUser,dbPass,Syntax.array(['client_encoding','UTF8']));
-		//my.set_charset("utf8");
-		trace(my);
+		dbh = new PDO('pgsql:host=$dbHost;dbname=$db',dbUser,dbPass,Syntax.array(['client_encoding','UTF8']));
+		//dbh.set_charset("utf8");
+		trace(dbh);
 		var jwt:String = params.get('jwt');
-		var userName:String = params.get('userName');
+		var user_name:String = params.get('user_name');
+		trace(jwt +':' + (jwt != null));
 		if (jwt.length > 0)
 		{
-			if(User.verify(jwt, userName,params))
+			if(User.verify(jwt, user_name,params))
 				Model.dispatch(params);			
 		}
 		
@@ -159,21 +162,53 @@ class S
 	
 	public static function sendData(dbData:DbData, data:RData):Bool
 	{
-		//var sRows:Serializer = new Serializer();
-		//var sRows:Array<StringMap<String>> = new Array();
-		//trace(rows);
 		var s:Serializer = new Serializer();
 		dbData.dataInfo = data.info;
 		Syntax.foreach(data.rows, function(k:Int, v:Dynamic)
 		{
 			dbData.dataRows.push(Lib.hashOfAssociativeArray(v));			
 		});
+		/*trace(dbData);
+		var b:Bytes = s.serialize(dbData);
+		var v:DbData = s.unserialize(b, DbData);
+		trace(v);*/
+		return sendbytes(s.serialize(dbData));
+	}
+
+	public static function sendErrors(dbData:DbData, ?err:Map<String,Dynamic>):Bool
+	{
+		var s:Serializer = new Serializer();
+		if (err != null)
+		{
+			for (k in err.keys())
+			{
+				dbData.dataErrors[k] = err[k];
+			}
+		}
+		return sendbytes(s.serialize(dbData));
+	}
+	
+	public static function sendInfo(dbData:DbData, ?info:Map<String,Dynamic>):Bool
+	{
+		var s:Serializer = new Serializer();
+		if (info != null)
+		{
+			for (k in info)
+			{
+				dbData.dataInfo[k] = info[k];
+			}
+		}
 		return sendbytes(s.serialize(dbData));
 	}
 	
 	public static function sendbytes(b:Bytes):Bool
 	{		
 		Web.setHeader('Content-Type', 'text/plain');
+		//trace(b.toString());
+		/*var s:Serializer = new Serializer();
+		var v:DbData = s.unserialize(b, DbData);
+		trace(v);*/
+		//Web.setHeader('Content-Type', 'application/octet-stream');
 		Web.setHeader("Access-Control-Allow-Headers", "access-control-allow-headers, access-control-allow-methods, access-control-allow-origin");
 		Web.setHeader("Access-Control-Allow-Credentials", "true");
 		Web.setHeader("Access-Control-Allow-Origin", "https://192.168.178.56:9000");
@@ -203,7 +238,7 @@ class S
 	}
 	
 	public static function newMemberID():Int {
-		var stmt:PDOStatement = S.my.query(
+		var stmt:PDOStatement = S.dbh.query(
 			'SELECT  MAX(CAST(vendor_lead_code AS UNSIGNED)) FROM vicidial_list WHERE list_id=10000'
 			);
 		return (stmt.rowCount()==0 ? 1: stmt.fetch(PDO.FETCH_COLUMN)+1);
@@ -215,18 +250,18 @@ class S
 			SELECT string_agg(TABLE_NAME,',') FROM information_schema.tables WHERE table_schema = '$db'
 			*/;
 		trace(sql);
-		var stmt:PDOStatement = S.my.query(
+		var stmt:PDOStatement = S.dbh.query(
 			//'SELECT string_agg(TABLE_NAME,\',\') FROM information_schema.tables WHERE table_schema = "$db";'
 			sql
 		);
 		/*if (stmt == false)
 		{
-			exit({error:S.my.errorInfo()});
+			exit({error:S.dbh.errorInfo()});
 		}*/
-		if (S.my.errorCode() != '00000')
+		if (S.dbh.errorCode() != '00000')
 		{
-			trace(S.my.errorCode());
-			trace(S.my.errorInfo());
+			trace(S.dbh.errorCode());
+			trace(S.dbh.errorInfo());
 			Sys.exit(0);
 		}
 		if (stmt.rowCount() == 1)
@@ -241,15 +276,15 @@ class S
 		var sql:String = comment(unindent, format) /*
 			SELECT string_agg(COLUMN_NAME,',') FROM information_schema.columns WHERE table_schema = '$db' AND table_name = '$table'
 			*/;
-		var stmt:PDOStatement = S.my.query(
+		var stmt:PDOStatement = S.dbh.query(
 			comment(unindent, format) /*
 			SELECT string_agg(COLUMN_NAME,',') FROM information_schema.columns WHERE table_schema = '$db' AND table_name = '$table'
 			*/			
 		);
-		if (S.my.errorCode() != '00000')
+		if (S.dbh.errorCode() != '00000')
 		{
-			trace(S.my.errorCode());
-			trace(S.my.errorInfo());
+			trace(S.dbh.errorCode());
+			trace(S.dbh.errorInfo());
 			Sys.exit(0);
 		}		
 		if (stmt.rowCount() == 1)

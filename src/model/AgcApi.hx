@@ -58,7 +58,7 @@ class AgcApi extends Model
 			}
 			else
 			{//	QUERY VALID STATI CHOICES
-				var campaign_id:String = S.my.real_escape_string(param.get('campaign_id'));
+				var campaign_id:String = S.dbh.real_escape_string(param.get('campaign_id'));
 				var sql = '(SELECT `status`,`status_name` FROM `vicidial_statuses` WHERE `selectable`="Y") UNION (SELECT `status`,`status_name` FROM `vicidial_campaign_statuses` WHERE `selectable`="Y" AND campaign_id="$campaign_id") ORDER BY `status`' ;				
 				data =  {
 					response:'OK',
@@ -88,9 +88,9 @@ class AgcApi extends Model
 		trace(url);
 		var agcResponse:String = Http.requestUrl(url);*/
 		var lead_id:Dynamic = Std.parseInt(param.get('lead_id'));
-		var agcResponse = S.my.query('UPDATE vicidial_list SET state="$state" WHERE lead_id=$lead_id');
+		var agcResponse = S.dbh.query('UPDATE vicidial_list SET state="$state" WHERE lead_id=$lead_id');
 		
-		return json_response(agcResponse ? 'OK' : S.my.error);
+		return json_response(agcResponse ? 'OK' : S.dbh.error);
 		//return json_response(agcResponse.indexOf('SUCCESS') == 0 ? 'OK' : agcResponse);
 	}
 	

@@ -11,10 +11,12 @@ import model.VicidialUsers;
 import model.*;
 import me.cunity.php.db.*;
 import php.Syntax;
+import php.Web;
 import php.db.PDO;
 import php.db.PDOStatement;
 import shared.DbData;
 import sys.db.*;
+import sys.io.File;
 
 using Lambda;
 using Util;
@@ -44,7 +46,7 @@ typedef MData =
 	@:optional var tableNames:Array<String>;
 	@:optional var typeMap:NativeArray;
 	@:optional var userMap:Array<UserInfo>;
-	@:optional var userName:String;
+	@:optional var user_name:String;
 };
 
 typedef RData =
@@ -90,6 +92,7 @@ class Model
 	public var table:String;
 	public var num_rows(default, null):Int;
 	var dbData:DbData;
+	var qParam:DbData;
 	var dataSource:StringMap<StringMap<String>>;// EACH KEY IS A TABLE NAME
 	var dataSourceSql:String;
 	var param:StringMap<String>;
@@ -135,6 +138,7 @@ class Model
 		}
 		return true;
 	}
+	
 	public function count():Int
 	{
 		var sqlBf:StringBuf = new StringBuf();
@@ -164,7 +168,7 @@ class Model
 		for (table in tableNames)
 		{
 			var tRel:StringMap<String> = dataSource.get(table);
-			var alias:String = quoteIdent(tRel.get('alias'));
+			var alias:String = (tRel.exists('alias')? quoteIdent(tRel.get('alias')):'');
 			var jCond:String = tRel.exists('jCond') ? quoteIdent(tRel.get('jCond')):null;
 			if (jCond != null)
 			{
@@ -239,12 +243,12 @@ class Model
 				var format:Array<String> = dbQueryFormats.get(f);
 				//trace(format);
 				if (format[0] == 'ALIAS')
-				fieldsWithFormat.push(S.my.quote( f ) + ' AS ' + format[1]);	
+				fieldsWithFormat.push(S.dbh.quote( f ) + ' AS ' + format[1]);	
 				else
-				fieldsWithFormat.push(format[0] + '(' + S.my.quote(f) + ', "' + format[1] + '") AS `' + f + '`');
+				fieldsWithFormat.push(format[0] + '(' + S.dbh.quote(f) + ', "' + format[1] + '") AS `' + f + '`');
 			}
 			else
-				fieldsWithFormat.push(S.my.quote( f ));				
+				fieldsWithFormat.push(S.dbh.quote( f ));				
 		}
 		//trace(fieldsWithFormat);
 		return fieldsWithFormat.join(',');
@@ -262,10 +266,11 @@ class Model
 	public function execute(sql:String):NativeArray
 	{
 		trace(sql);	
-		var stmt:PDOStatement =  S.my.prepare(sql);
-		if (S.my.errorCode()!='00000')
+		var stmt:PDOStatement =  S.dbh.prepare(sql);
+		if (S.dbh.errorCode()!='00000')
 		{
 			trace(stmt.errorInfo());
+			S.sendErrors(dbData, ['DB' => stmt.errorInfo]);
 			return null;
 		}		
 		var bindTypes:String = '';
@@ -294,8 +299,8 @@ class Model
 				trace(stmt.errorInfo());
 				return null;
 			}
-			num_rows = stmt.rowCount();
-			if (num_rows>0)
+			dbData.dataInfo['count'] = stmt.rowCount();
+			if (dbData.dataInfo['count']>0)
 			{
 				data = stmt.fetchAll(PDO.FETCH_ASSOC);
 			}			
@@ -323,10 +328,10 @@ class Model
 	{
 		if (resultType == null)
 			resultType = PDO.FETCH_ASSOC;
-		var stm:PDOStatement = S.my.query(sql);
+		var stm:PDOStatement = S.dbh.query(sql);
 		if (! untyped stm)
 		{
-			trace(S.my.errorInfo());
+			trace(S.dbh.errorInfo());
 			Sys.exit(0);
 		}
 		stm.execute(new NativeArray());
@@ -348,8 +353,8 @@ class Model
 	public function update():NativeArray
 	{	
 		var sqlBf:StringBuf = new StringBuf();
-
-		sqlBf.add('UPDATE $queryFields ');
+		trace(queryFields);
+		sqlBf.add('UPDATE ');
 		if (tableNames.length>1)
 		{
 			sqlBf.add(joinSql);
@@ -365,6 +370,8 @@ class Model
 
 		var limit:String = param.get('limit');
 		buildLimit((limit == null?'25':limit), sqlBf);	//	TODO: CONFIG LIMIT DEFAULT
+		trace(sqlBf.toString());
+		//return null;
 		return execute(sqlBf.toString());
 	}
 	
@@ -477,7 +484,7 @@ class Model
 		}
 		
 		return '"$f"';
-		//return S.my.quote(f);
+		//return S.dbh.quote(f);
 	}	
 	
 	function row2jsonb(row:Dynamic):String
@@ -509,7 +516,12 @@ class Model
 		data = {};
 		data.rows = new NativeArray();
 		dbData = new DbData();
-		
+		if (param.exists('qParam'))
+		{
+			var s:Serializer = new Serializer();
+			qParam = s.unserialize(Bytes.ofString(param.get('qParam')),DbData);
+			trace(qParam);
+		}
 		if (param.exists('filter'))
 		{			
 			filterValues = new Array();
@@ -536,13 +548,16 @@ class Model
 				var tableName:String = quoteIdent(tnI.next());
 				tableNames.push(tableName);
 				var table:StringMap<String> = dataSource.get(tableName);
+				trace('$table $tableName');
 				if(table.exists('fields'))
 					fields = fields.concat(buildFields(tableName, table));
 			}
 		}
 		queryFields = fields.length > 0?fields.join(','):'*';		
 		trace(queryFields);
+		trace(param.get('values'));
 		joinSql = buildJoin();
+		trace(joinSql);
 		filterSql = buildCond();
 	}
 	
@@ -558,7 +573,7 @@ class Model
 	
 	public function json_encode():Void
 	{	
-		data.userName = S.userName;
+		data.user_name = S.user_name;
 		data.globals = globals;
 		S.add2Response({data:data});
 	}
@@ -613,7 +628,27 @@ class Model
 		{
 			dbData.dataRows.push(Lib.hashOfAssociativeArray(v));
 		});
+		trace(dbData);
 		return s.serialize(dbData);
 	}
 	
+	function sendRows(rows:NativeArray):Bool
+	{
+		var s:Serializer = new Serializer();
+		
+		Syntax.foreach(rows, function(k:Int, v:Dynamic)
+		{
+			dbData.dataRows.push(Lib.hashOfAssociativeArray(v));			
+		});
+		trace(dbData.dataRows[29]);
+		Web.setHeader('Content-Type', 'text/html charset=utf-8');
+		Web.setHeader("Access-Control-Allow-Headers", "access-control-allow-headers, access-control-allow-methods, access-control-allow-origin");
+		Web.setHeader("Access-Control-Allow-Credentials", "true");
+		Web.setHeader("Access-Control-Allow-Origin", "https://192.168.178.56:9000");
+		var out = File.write("php://output", true);
+		out.bigEndian = true;
+		out.write(s.serialize(dbData));
+		Sys.exit(0);
+		return true;
+	}
 }

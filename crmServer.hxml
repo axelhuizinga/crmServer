@@ -8,6 +8,5 @@
 -cp lib
 -cp src
 -php bin
--D 
 -main S
 -dce std
