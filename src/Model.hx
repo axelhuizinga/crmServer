@@ -641,6 +641,7 @@ class Model
 			dbData.dataRows.push(Lib.hashOfAssociativeArray(v));			
 		});
 		trace(dbData.dataRows[29]);
+		trace(dbData.dataRows[29].get('id') + '<<<');
 		Web.setHeader('Content-Type', 'text/html charset=utf-8');
 		Web.setHeader("Access-Control-Allow-Headers", "access-control-allow-headers, access-control-allow-methods, access-control-allow-origin");
 		Web.setHeader("Access-Control-Allow-Credentials", "true");

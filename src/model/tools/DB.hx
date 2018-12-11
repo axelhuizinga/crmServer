@@ -47,7 +47,7 @@ class DB extends Model
 		var filter:String = (true?'':"WHERE table_name NOT LIKE '\\_%'");	
 		
 		var sql =  comment(unindent, format) /*
-				SELECT id,table_name,field_name,readonly,element,"any" FROM _table_fields 
+				SELECT id,table_name,field_name,readonly,element,"any",required,use_as_index FROM _table_fields 
 				$filter 
 				ORDER BY table_name,field_name
 				*/;
@@ -60,6 +60,7 @@ class DB extends Model
 		}
 		var tableFields:NativeArray = stmt.fetchAll(PDO.FETCH_ASSOC);//DB.serializeRows(
 		trace('tableFields found: ' + stmt.rowCount());		
+	trace(untyped tableFields[0]['id'] + '<<<');
 		sendRows(tableFields);
 	}
 	
@@ -82,14 +83,23 @@ class DB extends Model
 			INSERT INTO crm._table_fields VALUES (DEFAULT, '$tableName','{$fieldNames}', jsonb_build_object($fieldsSql), 1)
 			ON CONFLICT (table_name) DO UPDATE SET field_names='{$fieldNames}', field_hints=jsonb_build_object($fieldsSql)
 			*/;
-			trace(sql);
-			var res:PDOStatement = S.dbh.query(sql);
-			if (untyped res == false)
+			for (field in fields)
 			{
-				trace(S.dbh.errorInfo());
-				//S.send(Serializer.run(['error'=>S.dbh.errorInfo()]));
+				sql = comment(unindent, format) /*
+				INSERT INTO crm._table_fields VALUES (DEFAULT, '$tableName','$field', jsonb_build_object($fieldsSql), 1)
+				ON CONFLICT (table_name) DO UPDATE SET field_names='{$fieldNames}', field_hints=jsonb_build_object($fieldsSql)
+				*/;				
+				trace(sql);
+				var res:PDOStatement = S.dbh.query(sql);
+				if (untyped res == false)
+				{
+					trace(S.dbh.errorInfo());
+					//S.send(Serializer.run(['error'=>S.dbh.errorInfo()]));
+				}
+				trace('Inserted ${tableName}: ' + res.rowCount());				
 			}
-			trace('Inserted ${tableName}: ' + res.rowCount());
+
+
 		}
 	}		
 	

@@ -2,7 +2,6 @@
 -lib jwt
 -lib random
 -lib tjson
--lib msgpack-haxe
 -lib hxbit
 -cp C:/www/remotion4.me/httpdocs/lib
 -cp lib
