@@ -1,5 +1,6 @@
 package view;
 import haxe.ds.StringMap;
+import php.net.Socket;
 import haxe.Timer;
 //import FormData.FData;
 import js.jquery.*;

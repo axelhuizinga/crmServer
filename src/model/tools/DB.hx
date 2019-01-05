@@ -1,4 +1,5 @@
 package model.tools;
+import haxe.io.Bytes;
 import hxbit.Serializer;
 import haxe.ds.StringMap;
 import php.Lib;
@@ -8,6 +9,7 @@ import comments.CommentString.*;
 import php.Web;
 import php.db.PDO;
 import php.db.PDOStatement;
+import shared.DbData;
 import sys.io.File;
 
 /**
@@ -98,18 +100,35 @@ class DB extends Model
 				}
 				trace('Inserted ${tableName}: ' + res.rowCount());				
 			}
-
-
 		}
 	}		
 	
-	/*public static function serializeRows(rows:NativeArray):Void
+	public function saveTableFields()
 	{
+		var dBytes:Bytes = Bytes.ofString(param.get('dbData'));
 		var s:Serializer = new Serializer();
-		Syntax.foreach(rows, function(k:Int, v:Dynamic)
+		var pData:DbData = s.unserialize(dBytes, DbData);
+		trace(pData.dataParams);
+		var updated:Int = 0;
+		for (k in pData.dataParams.keys())
 		{
-			dbData.dbRows.push(Lib.hashOfAssociativeArray(v));
-		});
-		s.serialize(sRows);
-	}	*/
+			//updateFieldsTable(pData.dataParams[k];
+			var fields:String = S.dbh.quote(param.get('fields'), PDO.PARAM_STR);
+			
+			var sql = comment(unindent, format) /*
+			UPDATE crm.table_fields SET $fields WHERE id=${Std.parseInt(k)}
+			*/;
+			
+			var stmt:PDOStatement = S.dbh.prepare(sql);
+			if( !Model.paramExecute(stmt, Lib.associativeArrayOfHash(pData.dataParams[k])))
+			{
+				S.sendErrors(dbData,['${param.get('action')}' => stmt.errorInfo()]);
+			}
+			if(stmt.rowCount()==1)
+			{
+				updated++;
+			}
+		}
+		S.sendInfo(dbData, ['saveTableFields' => 'OK', 'updatedRows' => updated]);
+	}
 }

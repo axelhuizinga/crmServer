@@ -2,6 +2,7 @@ package model.auth;
 import haxe.Serializer;
 import haxe.crypto.Sha256;
 import haxe.ds.IntMap;
+import haxe.ds.Map;
 import haxe.ds.StringMap;
 import jwt.JWT;
 import me.cunity.debug.Out;
@@ -11,6 +12,7 @@ import php.Lib;
 import php.NativeArray;
 import php.Syntax;
 import php.Web;
+import php.db.PDO;
 import php.db.PDOStatement;
 
 /**
@@ -46,7 +48,12 @@ class User extends Model
 		S.sendbytes(serializeRows(doSelect()));
 	}
 	
-	public function userIsAuthorized():Bool
+	public function getExternalUserData():Map<String, Dynamic>
+	{
+		return null;
+	}
+	
+	public function userIsAuthorized():UserAuth
 	{
 		var stmt:PDOStatement = S.dbh.prepare('SELECT user_name FROM ${S.db}.users WHERE user_name=:user_name AND active=TRUE');
 		if( !Model.paramExecute(stmt, Lib.associativeArrayOfObject({':user_name': '${param.get('user_name')}'})))
@@ -57,46 +64,56 @@ class User extends Model
 		{
 			//ACTIVE USER EXISTS
 			stmt = S.dbh.prepare(
-				'SELECT user_name FROM ${S.db}.users WHERE user_name=:user_name AND password=crypt(:password,password)');
+				'SELECT change_pass_required, last_login, user_name FROM ${S.db}.users WHERE user_name=:user_name AND password=crypt(:password,password)');
 			if( !Model.paramExecute(stmt, Lib.associativeArrayOfObject({':user_name': '${param.get('user_name')}',':password':'${param.get('pass')}'})))
 			{
 				S.sendErrors(dbData,['${param.get('action')}' => stmt.errorInfo()]);
 			}
 			if (stmt.rowCount()==0)
 			{
-				S.sendErrors(dbData,['${param.get('action')}'=>'Das Passwort ist nicht korrekt!']);
+				S.sendErrors(dbData,['${param.get('action')}'=>'pass']);
 			}
+			var res:Map<String,Dynamic> = Lib.hashOfAssociativeArray(stmt.fetch(PDO.FETCH_ASSOC));
+			dbData.dataInfo['last_login'] = res['last_login'];
+			trace(res);
+			//if (res == 'TRUE' || res == '1')
+			if (res['change_pass_required']==1 || res['change_pass_required']==true)
+				return UserAuth.PassChangeRequired;
 			// USER AUTHORIZED
-			return true;			
+			return UserAuth.AuthOK;			
 		}
 		else
 		{
-			S.sendErrors(dbData,['${param.get('action')}'=>'${param.get('user_name')} ist nicht vorhanden oder nicht aktiv!']);
-			return false;
+			S.sendErrors(dbData,['${param.get('action')}'=>'user_name']);
+			return UserAuth.NotOK;
 		}
 	}
 	
 	public static function login(params:StringMap<String>, secret:String):Bool
 	{
 		var me:User = new User(params);
-		if (me.userIsAuthorized())
+		switch(me.userIsAuthorized())
 		{
-			var d:Float = DateTools.delta(Date.now(), DateTools.hours(11)).getTime();
-			trace(d + ':' + Date.fromTime(d));
-			var	jwt = JWT.sign({
-					user_name:params.get('user_name'),
-					validUntil:d,
-					ip: Web.getClientIP()
-					//validUntil:Date.now().getTime()
-				}, secret);						
-			trace(JWT.extract(jwt));
-			Web.setCookie('user.jwt', jwt, Date.fromTime(d + 86400000));
-			Web.setCookie('user.user_name', jwt, Date.fromTime(d + 86400000));
-			me.dbData.dataInfo['jwt'] = jwt;
-			S.sendInfo(me.dbData);
-			return true;
+			case uath = UserAuth.AuthOK|UserAuth.PassChangeRequired:
+				var d:Float = DateTools.delta(Date.now(), DateTools.hours(11)).getTime();
+				trace(d + ':' + Date.fromTime(d));
+				var	jwt = JWT.sign({
+						user_name:params.get('user_name'),
+						validUntil:d,
+						ip: Web.getClientIP()
+						//validUntil:Date.now().getTime()
+					}, secret);						
+				trace(JWT.extract(jwt));
+				Web.setCookie('user.jwt', jwt, Date.fromTime(d + 86400000));
+				Web.setCookie('user.user_name', jwt, Date.fromTime(d + 86400000));
+				me.dbData.dataInfo['jwt'] = jwt;
+				if (uath == UserAuth.PassChangeRequired)
+				me.dbData.dataInfo['change_pass_required'] = true;
+				S.sendInfo(me.dbData);
+				return true;
+			default:
+				return false;
 		}
-		return false;
 	}
 	
 	public function changePassword():Bool
@@ -106,8 +123,9 @@ class User extends Model
 			dbData.dataErrors['changePassword'] = 'Das Passwort wurde nicht geändert!';
 			S.sendInfo(dbData);
 		}
-		if (userIsAuthorized())
+		switch (userIsAuthorized())
 		{
+			default:
 			trace('UPDATE ${S.db}.users SET password=crypt(:new_password,gen_salt(\'bf\',8)),change_pass_required=false WHERE user_name=:user_name AND password=CRYPT(:pass, password)');
 			var stmt:PDOStatement = S.dbh.prepare(
 				'UPDATE ${S.db}.users SET password=crypt(:new_password,gen_salt(\'bf\',8)),change_pass_required=false WHERE user_name=:user_name AND password=CRYPT(:pass, password)');
@@ -148,6 +166,11 @@ class User extends Model
 		trace(stmt.errorInfo());
 		return success;
 	}
+
+	public static function getViciDialPassword(jwt:String, user_name:String,?params:StringMap<String>):String
+	{
+		return '';
+	}
 	
 	public static function verify(jwt:String, user_name:String,?params:StringMap<String>):Bool
 	{
@@ -182,4 +205,10 @@ class User extends Model
 		
 	}
 	
+}
+
+enum UserAuth{
+	AuthOK;
+	PassChangeRequired;
+	NotOK;
 }

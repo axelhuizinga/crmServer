@@ -1,6 +1,7 @@
 package;
 
-import haxe.ds.Either;
+import haxe.PosInfos;
+//import haxe.ds.Either;
 import haxe.ds.StringMap;
 import haxe.io.Bytes;
 import me.cunity.debug.Out;
@@ -9,14 +10,15 @@ import php.db.PDO;
 import php.db.PDOStatement;
 import shared.DbData;
 
-import me.cunity.php.Services_JSON;
-import phprbac.Rbac;
+//import me.cunity.php.Services_JSON;
+//import phprbac.Rbac;
 //import model.AgcApi;
 //import model.App;
 //import model.Campaigns;
 import model.contacts.Contact;
 import model.admin.CreateHistoryTrigger;
 import model.admin.CreateUsers;
+import model.admin.SyncExternal;
 import model.roles.Users;
 import model.tools.DB;
 import Model.MData;
@@ -69,20 +71,26 @@ class S
 	public static var dbUser:String;
 	public static var dbPass:String;	
 	public static var vicidialUser:String;
-	public static var vicidialPass:String;
+	public static var viciDial: Map<String, Dynamic>;
 	
 	static function main() 
 	{		
 		haxe.Log.trace = Debug._trace;	
 
-		//trace(conf.get('ini'));		
-		trace(vicidialUser);
+		//trace(conf.get('ini'));
+		var ini:NativeArray = S.conf.get('ini');
+		var vD:NativeArray = ini['vicidial'];
+		trace(ini);
+		trace(vD);
+		var viciDial = Lib.hashOfAssociativeArray(vD);
+		trace(viciDial['url']);
+		trace(viciDial['admin']);
 		trace(Syntax.code("$_SERVER['VERIFIED']"));
 		//var pd:Dynamic = Web.getPostData();
 		last_request_time = Date.now();
 		var now:String = DateTools.format(last_request_time, "%d.%m.%y %H:%M:%S");
 		response = {content:'',error:''};
-		var params:StringMap<String> = Web.getParams();
+		var params:Map<String,Dynamic> = Web.getParams();
 		
 		trace(Date.now().toString() + ' == $now' );		
 		trace(params);		
@@ -106,8 +114,7 @@ class S
 			if(User.verify(jwt, user_name,params))
 				Model.dispatch(params);			
 		}
-		
-		//var pass = params.get('pass');		
+	
 		User.login(params, secret);		
 		exit(response);
 
@@ -139,7 +146,7 @@ class S
 		}			
 		//var exitValue =  
 		//trace( Syntax.code("json_encode({0})",r.data));
-		//trace(Json.stringify(r));
+		trace(Json.stringify(r));
 		//trace( Syntax.code("json_encode({0})",r));
 		//Sys.print(Syntax.code("json_encode({0})",r));
 		Sys.print(Json.stringify(r));
@@ -163,13 +170,17 @@ class S
 	public static function sendData(dbData:DbData, data:RData):Bool
 	{
 		var s:Serializer = new Serializer();
-		dbData.dataInfo = data.info;
-		Syntax.foreach(data.rows, function(k:Int, v:Dynamic)
-		{
-			dbData.dataRows.push(Lib.hashOfAssociativeArray(v));			
-		});
-		/*trace(dbData);
-		var b:Bytes = s.serialize(dbData);
+		trace(data);
+		if(data != null){
+			dbData.dataInfo = data.info;
+			Syntax.foreach(data.rows, function(k:Int, v:Dynamic)
+			{
+				dbData.dataRows.push(Lib.hashOfAssociativeArray(v));			
+			});			
+		}
+
+		trace(dbData);
+		/*var b:Bytes = s.serialize(dbData);
 		var v:DbData = s.unserialize(b, DbData);
 		trace(v);*/
 		return sendbytes(s.serialize(dbData));
@@ -193,7 +204,7 @@ class S
 		var s:Serializer = new Serializer();
 		if (info != null)
 		{
-			for (k in info)
+			for (k in info.keys())
 			{
 				dbData.dataInfo[k] = info[k];
 			}
@@ -208,6 +219,7 @@ class S
 		/*var s:Serializer = new Serializer();
 		var v:DbData = s.unserialize(b, DbData);
 		trace(v);*/
+		trace('OK');
 		//Web.setHeader('Content-Type', 'application/octet-stream');
 		Web.setHeader("Access-Control-Allow-Headers", "access-control-allow-headers, access-control-allow-methods, access-control-allow-origin");
 		Web.setHeader("Access-Control-Allow-Credentials", "true");
@@ -270,6 +282,28 @@ class S
 		}
 		return null;
 	}
+
+	public static function dumpNativeArray(a:NativeArray, ?i:PosInfos):String
+	{
+		var d:String = '';
+		trace(Reflect.fields(a),i);
+		trace(Type.getClass(a),i);
+		//var m:Map<String,Dynamic>
+		//names = (Type.getClass(ob) != null) ?
+			//Type.getInstanceFields(Type.getClass(ob)):
+			//Reflect.fields(ob);
+		//if (Type.getClass(ob) != null)
+		return d;
+	}
+
+
+	public static function saveLog(what:Dynamic,?pos:PosInfos):Void
+	{
+		//trace(pos.fileName + ':' + pos.lineNumber + '::' + pos.methodName);
+		trace(what);
+		return;
+		dumpNativeArray(what, pos);
+	}
 	
 	public static function tableFields(table:String, db:String = 'crm'): Array<String>
 	{
@@ -297,7 +331,7 @@ class S
 	static function __init__() {
 		Syntax.code('require_once({0})', '../.crm/db.php');
 		Syntax.code('require_once({0})', '../.crm/functions.php');
-		Syntax.code('require_once({0})', 'inc/PhpRbac/Rbac.php');
+		//Syntax.code('require_once({0})', 'inc/PhpRbac/Rbac.php');
 		Debug.logFile = untyped Syntax.code("$appLog");
 		//edump(Debug.logFile);
 		//Debug.logFile = untyped __var__("GLOBALS","appLog");
@@ -313,8 +347,7 @@ class S
 		conf =  Config.load('appData.js');
 		var ini:NativeArray = Syntax.code("$ini");
 		conf.set('ini', ini);		
-		vicidialUser = Syntax.code("$user");
-		vicidialPass = Syntax.code("$pass");		
+		Out.skipFields = ['admin','pass','password'];
 	}
 
 }

@@ -81,11 +81,12 @@ class CreateUsers extends Model
 		var ini:NativeArray = S.conf.get('ini');
 		var vD:NativeArray = ini['vicidial'];
 		//trace(ini);
+		trace(vD);
 		trace(S.vicidialUser);
 		var url:String = Syntax.code("{0}['vicidial']['url']", ini);
-		trace(url + '?className=AdminApi&action=vicidial_user_groups&user=${S.vicidialUser}&pass=xxx');
+		trace(url + '?className=AdminApi&action=vicidial_user_groups&user=${param["user_name"]}&pass=xxx');
 		var vUserGroups:Dynamic = Json.parse(Http.requestUrl(
-		'${url}?className=AdminApi&action=vicidial_user_groups&user=${S.vicidialUser}&pass=${S.vicidialPass}'));
+		'${url}?className=AdminApi&action=vicidial_user_groups&user=${param["user_name"]}}&pass=${param["pass"]}'));
 		return vUserGroups.rows;		
 	}
 	
@@ -108,10 +109,10 @@ class CreateUsers extends Model
 		//trace(ini);
 		trace(S.vicidialUser);
 		var url:String = Syntax.code("{0}['vicidial']['url']", ini);
-		trace(url + '?className=AdminApi&action=storno_grund&user=${S.vicidialUser}&pass=xxx');
+		trace(url + '?className=AdminApi&action=storno_grund&user=${S.viciDial["admin"]}&pass=xxx');
 		//trace(Syntax.code("file_get_contents({0})",'${url}?className=AdminApi&action=storno_grund&user=${S.vicidialUser}&pass=${S.vicidialPass}'));
 		return Json.parse(Syntax.code("file_get_contents({0})",
-		'${url}?className=AdminApi&action=storno_grund&user=${S.vicidialUser}&pass=${S.vicidialPass}')).rows;
+		'${url}?className=AdminApi&action=storno_grund&user=${S.viciDial["admin"]}&pass=${S.viciDial["pass"]}')).rows;
 		//data.rows = end_reasons.rows;		
 	}
 	
@@ -188,12 +189,13 @@ class CreateUsers extends Model
 	{
 		var ini:NativeArray = S.conf.get('ini');
 		var vD:NativeArray = ini['vicidial'];
-		//trace(ini);
+		trace(ini);
+		trace(vD);
 		trace(S.vicidialUser);
 		var url:String = Syntax.code("{0}['vicidial']['url']", ini);
-		trace(url + '?className=AdminApi&action=vicidial_users&user=${S.vicidialUser}&pass=${S.vicidialPass}');
+		trace(url + '?className=AdminApi&action=vicidial_users&user=${param["user_name"]}}&pass=xxx');
 		//var res:String = Http.requestUrl('${url}?className=AdminApi&action=vicidial_users&user=${S.vicidialUser}&pass=${S.vicidialPass}');
-		var res:String =  Syntax.code("file_get_contents({0})", '$url?className=AdminApi&action=vicidial_users&user=${S.vicidialUser}&pass=${S.vicidialPass}&active=Y');
+		var res:String =  Syntax.code("file_get_contents({0})", '$url?className=AdminApi&action=vicidial_users&user=${param["user_name"]}}&pass=${param["pass"]}}&active=Y');
 		trace(res.substr(0, 18));
 		return Json.parse(res).rows;
 	}

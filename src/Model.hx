@@ -95,7 +95,7 @@ class Model
 	var qParam:DbData;
 	var dataSource:StringMap<StringMap<String>>;// EACH KEY IS A TABLE NAME
 	var dataSourceSql:String;
-	var param:StringMap<String>;
+	var param:Map<String, Dynamic>;
 	
 	public static function dispatch(param:StringMap<Dynamic>):Void
 	{
@@ -130,7 +130,7 @@ class Model
 	
 	public static function paramExecute(stmt:PDOStatement, ?values:NativeArray):Bool
 	{
-		trace(Std.string(values));
+		S.saveLog(values);
 		if (!stmt.execute(values))
 		{
 			trace(stmt.errorInfo());
@@ -513,6 +513,7 @@ class Model
 	public function new(?param:StringMap<String>) 
 	{
 		this.param = param;
+		trace(param);
 		data = {};
 		data.rows = new NativeArray();
 		dbData = new DbData();
@@ -537,7 +538,7 @@ class Model
 		fieldNames = S.tableFields(table);
 		tableNames = [];
 		var fields:Array<String> = [];
-		trace('>'+param.get('dataSource')+'<');
+		//trace('>'+param.get('dataSource')+'<');
 		if(param.get('dataSource') != null)
 		{
 			dataSource = Unserializer.run(param.get('dataSource'));
@@ -555,9 +556,9 @@ class Model
 		}
 		queryFields = fields.length > 0?fields.join(','):'*';		
 		trace(queryFields);
-		trace(param.get('values'));
+		//trace(param.get('values'));
 		joinSql = buildJoin();
-		trace(joinSql);
+		//trace(joinSql);
 		filterSql = buildCond();
 	}
 	
@@ -640,8 +641,6 @@ class Model
 		{
 			dbData.dataRows.push(Lib.hashOfAssociativeArray(v));			
 		});
-		trace(dbData.dataRows[29]);
-		trace(dbData.dataRows[29].get('id') + '<<<');
 		Web.setHeader('Content-Type', 'text/html charset=utf-8');
 		Web.setHeader("Access-Control-Allow-Headers", "access-control-allow-headers, access-control-allow-methods, access-control-allow-origin");
 		Web.setHeader("Access-Control-Allow-Credentials", "true");
