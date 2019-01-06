@@ -1,5 +1,6 @@
 package model.admin;
 
+import shared.DbData;
 import haxe.macro.Type.Ref;
 import haxe.ds.Map;
 import php.db.Mysqli;
@@ -47,10 +48,14 @@ class SyncExternal extends Model
             //S.saveLog(data);
             var dRows:Array<Dynamic> = Json.parse(data);
             trace(dRows.length);
+            //trace(dRows[dRows.length-2]);
+            trace(data.indexOf('phone_data'));
             //dbData.dataRows = [['length'=>dRows.length]];
             dbData.dataRows = [];
             var fNames:Array<String> = Reflect.fields(dRows[0]);
-            trace(fNames);
+            if(!fNames.has('phone_data'))
+                fNames.push('phone_data');
+            trace(fNames.has('phone_data'));
             for(r in dRows)
             {
                 dbData.dataRows.push(
@@ -60,7 +65,7 @@ class SyncExternal extends Model
                     ]
                 );
             }
-            S.sendData(dbData, null);
+            S.sendData(saveUserDetails(), null);
         };
         req.onError = function (msg:String)
         {
@@ -70,6 +75,46 @@ class SyncExternal extends Model
         { trace(s);}
         req.request(true);
         trace('done');
+    }
+
+    function saveUserDetails():DbData
+    {
+        var updated:Int = 0;
+        //dbData = new DbData();
+        var stmt:PDOStatement = null;
+        trace(dbData.dataRows[dbData.dataRows.length-2]);
+        for(dR in dbData.dataRows)
+        {
+           /* var sql:String = 'SELECT external FROM users WHERE user_name = \'${dR['user']}\'';
+            var q:EitherType<PDOStatement,Bool> = S.dbh.query(sql);
+            if(!q)
+            {
+                dbData.dataErrors = ['${param.get('action')}' => S.dbh.errorInfo()];
+                return dbData;
+            }
+            var eStmt:PDOStatement = cast(q, PDOStatement);
+
+            var external:NativeArray = eStmt.fetch();
+            trace(sql);
+            //trace(Type.typeof(external));
+
+            if(1 == updated++)
+            trace(external);*/
+            var external_text = row2jsonb(Lib.objectOfAssociativeArray(Lib.associativeArrayOfHash(dR)));
+            var sql = comment(unindent, format) /*
+            UPDATE crm.users SET active='${dR['active']}',edited_by=101, external = jsonb_object('{$external_text}')::jsonb WHERE user_name='${dR['user']}'
+            */;
+            
+            var q:EitherType<PDOStatement,Bool> = S.dbh.query(sql);
+            if(!q)
+            {
+               dbData.dataErrors = ['${param.get('action')}' => S.dbh.errorInfo()];
+               return dbData;
+            } 
+        }        
+        dbData.dataInfo = ['saveUserDetails' => 'OK', 'updatedRows' => updated];
+        trace(dbData.dataInfo);
+		return dbData; 
     }
 
     public function getViciDialData():Map<String,Dynamic> 
@@ -82,7 +127,7 @@ class SyncExternal extends Model
             for(f in fields)
             f => ini[f]
         ];
-        S.saveLog(info);
+        //S.saveLog(info);
         return info;
 		S.sendInfo(dbData, info);
 	}

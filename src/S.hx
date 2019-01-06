@@ -179,7 +179,8 @@ class S
 			});			
 		}
 
-		trace(dbData);
+		//trace(dbData.dataRows[0]);
+		trace(dbData.dataRows[dbData.dataRows.length-2]);
 		/*var b:Bytes = s.serialize(dbData);
 		var v:DbData = s.unserialize(b, DbData);
 		trace(v);*/
