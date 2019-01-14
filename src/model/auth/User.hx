@@ -37,7 +37,11 @@ class User extends Model
 			data = {
 				content:'OK'
 			};
-			json_encode();
+			dbData.dataInfo['verified'] = true;
+			dbData.dataInfo['user_data'] = Lib.objectOfAssociativeArray(doSelect()[0]);
+			//param.set('filter','user_name|${user_name}');
+			//sendRows(doSelect());
+			S.sendInfo(dbData);
 		}
 	}
 	

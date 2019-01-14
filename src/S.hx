@@ -80,8 +80,8 @@ class S
 		//trace(conf.get('ini'));
 		var ini:NativeArray = S.conf.get('ini');
 		var vD:NativeArray = ini['vicidial'];
-		trace(ini);
-		trace(vD);
+		//trace(ini);
+		trace(vD['syncApi']);
 		var viciDial = Lib.hashOfAssociativeArray(vD);
 		trace(viciDial['url']);
 		trace(viciDial['admin']);
@@ -301,7 +301,16 @@ class S
 	public static function saveLog(what:Dynamic,?pos:PosInfos):Void
 	{
 		//trace(pos.fileName + ':' + pos.lineNumber + '::' + pos.methodName);
-		trace(what);
+		//trace(what);
+		var fields:Array<String> = Reflect.fields(what);
+		for (f in fields)
+		{
+			if(f.indexOf('pass') > -1)
+			{
+				continue;
+			}
+			trace(Reflect.field(what,f), pos);
+		}
 		return;
 		dumpNativeArray(what, pos);
 	}
